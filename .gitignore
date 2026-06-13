@@ -1,0 +1,30 @@
+# Environnement Python
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+
+# Variables d'environnement (ne JAMAIS committer)
+.env
+.env.local
+.env.*.local
+
+# Base de données locale
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log

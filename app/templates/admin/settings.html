@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Réglages{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><i class="fa fa-sliders" style="color:var(--accent);"></i> Réglages de l'application</h1>
+  <p class="page-subtitle">Personnalisez le texte de fermeture, les coordonnées et la terminologie</p>
+</div>
+
+<!-- Réglages du concessionnaire -->
+<div class="card">
+  <div class="card-title"><i class="fa fa-building"></i> Informations du concessionnaire</div>
+  <form method="post" action="/admin/settings/save">
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label class="form-label">Nom du concessionnaire</label>
+        <input class="form-control" name="dealership_name" value="{{ settings.dealership.name }}" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ville</label>
+        <input class="form-control" name="dealership_city" value="{{ settings.dealership.city }}" />
+      </div>
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label class="form-label">Téléphone</label>
+        <input class="form-control" name="dealership_phone" value="{{ settings.dealership.phone }}" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Site web</label>
+        <input class="form-control" name="dealership_website" value="{{ settings.dealership.website }}" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Paragraphe de fermeture des descriptions</label>
+      <p class="form-hint">Ce texte apparaît à la fin de chaque description générée.</p>
+      <textarea class="form-control" name="closing_paragraph" rows="4">{{ settings.closing_paragraph }}</textarea>
+    </div>
+    <button type="submit" class="btn-primary"><i class="fa fa-floppy-disk"></i> Enregistrer</button>
+  </form>
+</div>
+
+<!-- Terminologie française -->
+<div class="card" id="terminology">
+  <div class="card-title"><i class="fa fa-language"></i> Terminologie française québécoise</div>
+  <p class="text-muted text-sm" style="margin-bottom:16px;">
+    Ces termes sont utilisés par l'IA pour traduire correctement les termes techniques anglais en français québécois.
+  </p>
+
+  <div class="table-wrap" style="margin-bottom:20px;">
+    <table>
+      <thead>
+        <tr><th>Terme anglais</th><th>Terme français préféré</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for i, term in terminology.terms | enumerate %}
+        <tr>
+          <td class="text-muted">{{ term.en }}</td>
+          <td><strong>{{ term.fr }}</strong></td>
+          <td style="text-align:right;">
+            <form method="post" action="/admin/settings/terminology/delete/{{ i }}" style="display:inline;">
+              <button type="submit" class="btn-icon" title="Supprimer"
+                      onclick="return confirm('Supprimer ce terme ?')">
+                <i class="fa fa-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <form method="post" action="/admin/settings/terminology/add">
+    <div class="form-row cols-2" style="align-items:flex-end;">
+      <div class="form-group mb-0">
+        <label class="form-label">Terme anglais</label>
+        <input class="form-control" name="term_en" placeholder="ex: slideout" required />
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label">Terme français</label>
+        <input class="form-control" name="term_fr" placeholder="ex: Extension coulissante" required />
+      </div>
+    </div>
+    <button type="submit" class="btn-primary mt-16"><i class="fa fa-plus"></i> Ajouter le terme</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Ajouter enumerate à Jinja2 via JS n'est pas possible — le filtre est géré côté Python
+</script>
+{% endblock %}

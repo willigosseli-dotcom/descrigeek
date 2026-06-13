@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}Mes réglages{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><i class="fa fa-gear" style="color:var(--accent);"></i> Mes réglages personnels</h1>
+  <p class="page-subtitle">Ces préférences s'appliquent uniquement à votre compte</p>
+</div>
+
+{% if success %}
+<div class="alert alert-success"><i class="fa fa-circle-check"></i> Réglages enregistrés avec succès.</div>
+{% endif %}
+
+<!-- Photo de profil (stockée localement, pas de serveur requis) -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-title"><i class="fa fa-camera"></i> Photo de profil</div>
+  <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+    <div style="position:relative;flex-shrink:0;">
+      <img id="avatar-preview" src="" alt="Avatar"
+           style="width:100px;height:100px;border-radius:50%;object-fit:cover;
+                  border:3px solid var(--accent);background:#e2e8f0;display:block;">
+      <label for="avatar-file-input"
+             style="position:absolute;bottom:0;right:0;width:30px;height:30px;
+                    background:var(--accent);border-radius:50%;display:flex;
+                    align-items:center;justify-content:center;cursor:pointer;
+                    border:2px solid #fff;color:#fff;font-size:0.8rem;"
+             title="Changer la photo">
+        <i class="fa fa-pen"></i>
+      </label>
+      <input type="file" id="avatar-file-input" accept="image/*"
+             style="display:none;" />
+    </div>
+    <div>
+      <p style="font-size:0.88rem;margin-bottom:10px;color:var(--text-muted);">
+        La photo est stockée localement et partagée avec le chat.<br>
+        Formats acceptés : JPG, PNG, WebP. Taille max recommandée : 5 Mo.
+      </p>
+      <button type="button" id="avatar-remove-btn" class="btn-secondary btn-sm">
+        <i class="fa fa-trash"></i> Supprimer la photo
+      </button>
+    </div>
+  </div>
+</div>
+
+<form method="post" action="/profile/save">
+  <!-- Taille du texte -->
+  <div class="card">
+    <div class="card-title"><i class="fa fa-text-height"></i> Taille du texte</div>
+    <div class="size-options">
+      {% for val, label in [('tiny','Très petit'), ('normal','Normal'), ('large','Grand'), ('xlarge','Très grand')] %}
+      <button type="button" class="size-btn {% if user.text_size == val %}selected{% endif %}"
+              onclick="selectSize('{{ val }}')" data-size="{{ val }}">
+        <span style="font-size: {% if val=='tiny' %}0.78rem{% elif val=='normal' %}0.95rem{% elif val=='large' %}1.1rem{% else %}1.3rem{% endif %}">
+          {{ label }}
+        </span>
+      </button>
+      {% endfor %}
+    </div>
+    <input type="hidden" name="text_size" id="input-text-size" value="{{ user.text_size }}" />
+  </div>
+
+  <!-- Thème de couleurs -->
+  <div class="card">
+    <div class="card-title"><i class="fa fa-palette"></i> Thème de couleurs</div>
+    <div class="theme-options" style="margin-bottom:16px;">
+      <button type="button" class="theme-btn theme-vr {% if user.color_theme == 'vr-thetford' %}selected{% endif %}"
+              onclick="selectTheme('vr-thetford')" data-theme="vr-thetford"
+              style="border-color: {% if user.color_theme == 'vr-thetford' %}#1B9DE0{% else %}var(--border){% endif %}">
+        <span style="color:#1B9DE0;">&#9679;</span> VR Thetford (bleu)
+      </button>
+      <button type="button" class="theme-btn {% if user.color_theme == 'sunset' %}selected{% endif %}"
+              onclick="selectTheme('sunset')" data-theme="sunset"
+              style="border-color: {% if user.color_theme == 'sunset' %}#E8632C{% else %}var(--border){% endif %}">
+        <span style="color:#E8632C;">&#9679;</span> Coucher de soleil
+      </button>
+      <button type="button" class="theme-btn {% if user.color_theme == 'dark' %}selected{% endif %}"
+              onclick="selectTheme('dark')" data-theme="dark"
+              style="background:#1a1a2e; border-color: {% if user.color_theme == 'dark' %}#7c6fdf{% else %}#2d2d4e{% endif %}">
+        <span style="color:#7c6fdf;">&#9679;</span> <span style="color:#a89df5;">Sombre</span>
+      </button>
+      <button type="button" class="theme-btn {% if user.color_theme == 'custom' %}selected{% endif %}"
+              onclick="selectTheme('custom')" data-theme="custom">
+        <span id="custom-swatch" style="color:{{ user.custom_accent_color or '#1B9DE0' }};">&#9679;</span> Personnalisé
+      </button>
+    </div>
+
+    <div id="custom-color-picker" style="display:{% if user.color_theme == 'custom' %}flex{% else %}none{% endif %};align-items:center;gap:12px;margin-top:8px;">
+      <label class="form-label mb-0">Couleur d'accent :</label>
+      <input type="color" name="custom_accent_color" id="custom-color-input"
+             value="{{ user.custom_accent_color or '#1B9DE0' }}"
+             style="width:48px;height:36px;border:1px solid var(--border);border-radius:6px;cursor:pointer;padding:2px;"
+             oninput="document.getElementById('custom-swatch').style.color=this.value" />
+      <span class="text-muted text-sm">Choisissez la couleur des boutons et titres</span>
+    </div>
+    <input type="hidden" name="color_theme" id="input-color-theme" value="{{ user.color_theme }}" />
+  </div>
+
+  <!-- Mot de passe -->
+  <div class="card">
+    <div class="card-title"><i class="fa fa-lock"></i> Changer mon mot de passe</div>
+    <p class="text-muted text-sm" style="margin-bottom:16px;">Laissez vide pour conserver le mot de passe actuel.</p>
+    <div class="form-row cols-2">
+      <div class="form-group mb-0">
+        <label class="form-label">Nouveau mot de passe</label>
+        <input class="form-control" type="password" name="new_password" placeholder="Nouveau mot de passe" />
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label">Confirmer</label>
+        <input class="form-control" type="password" name="confirm_password" placeholder="Confirmer le mot de passe" />
+      </div>
+    </div>
+  </div>
+
+  <button type="submit" class="btn-primary btn-lg"><i class="fa fa-floppy-disk"></i> Enregistrer mes réglages</button>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ─── Avatar upload (profile page) ───────────────────────────────────────────
+(function() {
+  if (!window.AvatarService || !window.CHAT_USER) return;
+  const svc      = new AvatarService();
+  const preview  = document.getElementById('avatar-preview');
+  const fileInput = document.getElementById('avatar-file-input');
+  const removeBtn = document.getElementById('avatar-remove-btn');
+  const username  = window.CHAT_USER.username;
+
+  // Afficher l'avatar actuel
+  preview.src = svc.getAvatar(username);
+
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    try {
+      const dataUrl = await svc.processFile(file, 200);
+      svc.setAvatar(username, dataUrl);
+      preview.src = dataUrl;
+      // Mettre à jour l'avatar dans le header sans rechargement
+      document.querySelectorAll('.header-avatar-img').forEach(img => img.src = dataUrl);
+      showToast('Photo enregistrée !');
+    } catch(e) {
+      showToast('Erreur lors du traitement de l\'image.', true);
+    }
+    fileInput.value = '';
+  });
+
+  removeBtn.addEventListener('click', () => {
+    const def = svc.getDefault(username);
+    svc.setAvatar(username, def);
+    preview.src = def;
+    document.querySelectorAll('.header-avatar-img').forEach(img => img.src = def);
+    showToast('Photo supprimée.');
+  });
+
+  function showToast(msg, error) {
+    const t = document.createElement('div');
+    t.className = 'alert ' + (error ? 'alert-warning' : 'alert-success');
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;animation:chat-drop 0.2s ease;';
+    t.innerHTML = `<i class="fa fa-${error?'triangle-exclamation':'circle-check'}"></i> ${msg}`;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+})();
+
+function selectSize(val) {
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector(`[data-size="${val}"]`).classList.add('selected');
+  document.getElementById('input-text-size').value = val;
+}
+function selectTheme(val) {
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector(`[data-theme="${val}"]`).classList.add('selected');
+  document.getElementById('input-color-theme').value = val;
+  document.getElementById('custom-color-picker').style.display = val === 'custom' ? 'flex' : 'none';
+}
+</script>
+{% endblock %}

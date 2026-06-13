@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Tableau de bord{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Bonjour, {{ user.full_name or user.username }}</h1>
+  <p class="page-subtitle">Bienvenue dans DescriGeek — votre générateur de descriptions VR</p>
+</div>
+
+<!-- Statistiques -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-icon blue"><i class="fa fa-file-lines"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.total }}</div>
+      <div class="stat-label">Description{{ 's' if stats.total != 1 }} au total</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon orange"><i class="fa fa-pen-to-square"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.draft }}</div>
+      <div class="stat-label">Brouillon{{ 's' if stats.draft != 1 }}</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon green"><i class="fa fa-circle-check"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.approved }}</div>
+      <div class="stat-label">Approuvée{{ 's' if stats.approved != 1 }}</div>
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon yellow"><i class="fa fa-globe"></i></div>
+    <div>
+      <div class="stat-value">{{ stats.published }}</div>
+      <div class="stat-label">Publiée{{ 's' if stats.published != 1 }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Actions rapides -->
+<div class="card">
+  <div class="card-title"><i class="fa fa-bolt"></i> Actions rapides</div>
+  <div style="display:flex; gap:12px; flex-wrap:wrap;">
+    <a href="/generate" class="btn-primary">
+      <i class="fa fa-wand-magic-sparkles"></i> Nouvelle description
+    </a>
+    <a href="/history" class="btn-secondary">
+      <i class="fa fa-clock-rotate-left"></i> Voir l'historique
+    </a>
+    {% if user.role == 'admin' %}
+    <a href="/admin/examples" class="btn-secondary">
+      <i class="fa fa-book-open"></i> Gérer les exemples
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Descriptions récentes -->
+<div class="card">
+  <div class="card-title"><i class="fa fa-clock-rotate-left"></i> Descriptions récentes</div>
+  {% if recent %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>No de stock</th>
+          <th>Véhicule</th>
+          <th>Auteur</th>
+          <th>Statut</th>
+          <th>Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in recent %}
+        <tr>
+          <td><strong>{{ d.stock_number }}</strong></td>
+          <td>{{ d.vehicle_year or '' }} {{ d.vehicle_make or '' }} {{ d.vehicle_model or '' }}</td>
+          <td class="text-muted text-sm">{{ d.author }}</td>
+          <td>
+            {% if d.status == 'draft' %}
+              <span class="badge badge-draft"><i class="fa fa-circle-half-stroke"></i> Brouillon</span>
+            {% elif d.status == 'approved' %}
+              <span class="badge badge-approved"><i class="fa fa-circle-check"></i> Approuvée</span>
+            {% else %}
+              <span class="badge badge-published"><i class="fa fa-globe"></i> Publiée</span>
+            {% endif %}
+          </td>
+          <td class="text-muted text-sm">{{ d.created_at.strftime('%d %b %Y') }}</td>
+          <td>
+            <a href="/description/{{ d.id }}" class="btn-secondary btn-sm">Voir</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center; padding:32px; color:var(--text-muted);">
+    <i class="fa fa-file-circle-plus" style="font-size:2.5rem; margin-bottom:12px; display:block; opacity:0.4;"></i>
+    Aucune description pour l'instant.<br>
+    <a href="/generate" style="margin-top:12px; display:inline-block;">Générez votre première description →</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

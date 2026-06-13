@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Générer une description{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><i class="fa fa-wand-magic-sparkles" style="color:var(--accent);"></i> Nouvelle description</h1>
+  <p class="page-subtitle">Entrez les informations du véhicule pour générer sa description</p>
+</div>
+
+<form method="post" action="/generate" id="generate-form">
+
+  <!-- Identité du véhicule -->
+  <div class="card">
+    <div class="card-title"><i class="fa fa-id-card"></i> Identité du véhicule</div>
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label class="form-label">Numéro de stock *</label>
+        <input class="form-control" name="stock_number" placeholder="ex: STK-2024-001" required
+               style="font-family:monospace;font-weight:700;letter-spacing:0.05em;" />
+        <p class="form-hint">Identifiant unique de l'unité dans votre inventaire</p>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Type de véhicule *</label>
+        <select class="form-control" name="vehicle_type" required>
+          <option value="">— Sélectionnez un type —</option>
+          {% for vt in vehicle_types %}
+          <option value="{{ vt }}">{{ vt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-row cols-3">
+      <div class="form-group mb-0">
+        <label class="form-label">Année *</label>
+        <input class="form-control" type="number" name="vehicle_year"
+               min="1990" max="2030" placeholder="2024" required />
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label">Marque *</label>
+        <input class="form-control" name="vehicle_make" placeholder="ex: Jayco" required
+               list="makes-list" />
+        <datalist id="makes-list">
+          <option>Jayco</option><option>Passport</option><option>Flagstaff</option>
+          <option>Compass</option><option>Magnitude</option><option>Outlaw</option>
+          <option>Alcom</option><option>Stealth</option><option>CargoPro</option>
+          <option>SnoPro</option><option>Remjco</option><option>Laroche</option>
+          <option>Savage</option><option>Talaria</option><option>LeoEV</option>
+          <option>Polaris</option><option>Can-Am</option><option>Yamaha</option>
+          <option>Arctic Cat</option><option>Ski-Doo</option>
+        </datalist>
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label">Modèle *</label>
+        <input class="form-control" name="vehicle_model" placeholder="ex: Eagle 28BH" required />
+      </div>
+    </div>
+  </div>
+
+  <!-- Options et particularités -->
+  <div class="card">
+    <div class="card-title"><i class="fa fa-list-check"></i> Options, accessoires et particularités</div>
+
+    <div class="form-group">
+      <label class="form-label">
+        <i class="fa fa-wrench" style="color:var(--orange);"></i>
+        Options et accessoires installés
+      </label>
+      <p class="form-hint">
+        Ce qui est physiquement présent sur l'unité (auvent, panneaux solaires, attelage, ensemble hiver, etc.).
+        Ces informations sont <strong>prioritaires</strong> sur les specs génériques.
+      </p>
+      <textarea class="form-control" name="options_accessories" rows="4"
+                placeholder="ex: Auvent électrique de 16 pi, 2 panneaux solaires de 200W, ensemble hiver complet, stabilisateurs électriques aux 4 coins, télévision 32 po extérieure..."></textarea>
+    </div>
+
+    <div class="form-group mb-0">
+      <label class="form-label">
+        <i class="fa fa-star" style="color:var(--yellow);"></i>
+        Particularités uniques de cette unité
+      </label>
+      <p class="form-hint">
+        Détails spécifiques à <em>cette</em> unité précise — configuration spéciale, modification, élément à mettre de l'avant.
+      </p>
+      <textarea class="form-control" name="unique_features" rows="3"
+                placeholder="ex: Unité de démonstration peu utilisée, configuration salon avant au lieu de dinette, couleur extérieure exclusive non disponible en 2025..."></textarea>
+    </div>
+  </div>
+
+  <!-- Source des specs -->
+  <div class="card" style="background:var(--bg);border:1.5px dashed var(--border);">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div class="card-title" style="margin-bottom:4px;"><i class="fa fa-database"></i> Recherche des spécifications</div>
+        <p class="text-muted text-sm">
+          L'application cherche d'abord dans vos fichiers internes (<code>data/specs/</code>),
+          puis dans le cache, puis sur le web si nécessaire.
+        </p>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.88rem;font-weight:600;">
+        <input type="checkbox" name="force_web_search" value="true"
+               style="width:16px;height:16px;accent-color:var(--accent);" />
+        Forcer une nouvelle recherche web
+      </label>
+    </div>
+  </div>
+
+  <!-- Bouton générer -->
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+    <button type="submit" class="btn-primary btn-lg" id="submit-btn">
+      <i class="fa fa-wand-magic-sparkles"></i>
+      Générer la description
+    </button>
+    <a href="/dashboard" class="btn-secondary">Annuler</a>
+    <span id="loading-msg" style="display:none;color:var(--text-muted);font-size:0.88rem;">
+      <i class="fa fa-spinner fa-spin"></i> Génération en cours, veuillez patienter...
+    </span>
+  </div>
+
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('generate-form').addEventListener('submit', function() {
+  document.getElementById('submit-btn').disabled = true;
+  document.getElementById('submit-btn').innerHTML = '<i class="fa fa-spinner fa-spin"></i> Génération...';
+  document.getElementById('loading-msg').style.display = 'inline';
+});
+</script>
+{% endblock %}

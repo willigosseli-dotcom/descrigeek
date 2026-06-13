@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Exemples modèles{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h1 class="page-title"><i class="fa fa-book-open" style="color:var(--accent);"></i> Exemples de descriptions modèles</h1>
+    <p class="page-subtitle">Ces exemples guident l'IA pour reproduire votre style d'écriture préféré</p>
+  </div>
+  <button class="btn-primary" onclick="document.getElementById('modal-add').style.display='flex'">
+    <i class="fa fa-plus"></i> Ajouter un exemple
+  </button>
+</div>
+
+<div class="alert alert-info">
+  <i class="fa fa-circle-info"></i>
+  <span>Plus vos exemples sont complets et variés, meilleures seront les descriptions générées. Ajoutez au moins un exemple par type de véhicule.</span>
+</div>
+
+{% if examples %}
+<div style="display:grid;gap:16px;">
+  {% for ex in examples %}
+  <div class="card" style="margin-bottom:0;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+          <strong style="font-size:1rem;">{{ ex.title }}</strong>
+          {% if ex.vehicle_type %}
+          <span class="badge badge-approved">{{ ex.vehicle_type }}</span>
+          {% endif %}
+          <span class="text-muted text-sm">Ajouté le {{ ex.created_at.strftime('%d %b %Y') }}</span>
+        </div>
+        {% if ex.notes %}
+        <p class="text-muted text-sm" style="margin-bottom:8px;">{{ ex.notes }}</p>
+        {% endif %}
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;max-height:120px;overflow:hidden;position:relative;">
+          <p style="font-size:0.82rem;line-height:1.6;white-space:pre-wrap;">{{ ex.content[:400] }}{% if ex.content|length > 400 %}…{% endif %}</p>
+          <div style="position:absolute;bottom:0;left:0;right:0;height:40px;background:linear-gradient(transparent,var(--bg));"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button class="btn-secondary btn-sm" onclick="openEdit({{ ex.id }}, {{ ex.title|tojson }}, {{ ex.vehicle_type|tojson if ex.vehicle_type else 'null' }}, {{ ex.content|tojson }}, {{ ex.notes|tojson if ex.notes else '\"\"' }})">
+          <i class="fa fa-pen"></i>
+        </button>
+        <form method="post" action="/admin/examples/{{ ex.id }}/delete" style="display:inline;">
+          <button type="submit" class="btn-danger btn-sm" onclick="return confirm('Supprimer cet exemple ?')">
+            <i class="fa fa-trash"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:48px;">
+  <i class="fa fa-book-open" style="font-size:3rem;color:var(--border);display:block;margin-bottom:16px;"></i>
+  <p style="font-size:1.05rem;font-weight:600;margin-bottom:8px;">Aucun exemple pour l'instant</p>
+  <p class="text-muted text-sm" style="margin-bottom:20px;">Ajoutez vos premières descriptions modèles pour guider l'IA.</p>
+  <button class="btn-primary" onclick="document.getElementById('modal-add').style.display='flex'">
+    <i class="fa fa-plus"></i> Ajouter un exemple
+  </button>
+</div>
+{% endif %}
+
+<!-- Modal : ajouter -->
+<div id="modal-add" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:200;align-items:center;justify-content:center;padding:16px;">
+  <div class="card" style="width:100%;max-width:680px;margin:0;box-shadow:var(--shadow-lg);max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 style="font-size:1.1rem;font-weight:700;">Ajouter un exemple modèle</h2>
+      <button class="btn-icon" onclick="document.getElementById('modal-add').style.display='none'"><i class="fa fa-xmark fa-lg"></i></button>
+    </div>
+    <form method="post" action="/admin/examples/add">
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label class="form-label">Titre de l'exemple *</label>
+          <input class="form-control" name="title" placeholder="ex: Roulotte familiale Jayco" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type de véhicule</label>
+          <select class="form-control" name="vehicle_type">
+            <option value="">— Tous types —</option>
+            <option>Roulotte</option>
+            <option>Fifth wheel</option>
+            <option>Motorisé</option>
+            <option>VTT</option>
+            <option>Côte-à-côte</option>
+            <option>Motoneige</option>
+            <option>Cart de golf</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description complète (exemple) *</label>
+        <p class="form-hint">Collez ici une description complète que vous aimez. L'IA s'en inspirera pour le style et la structure.</p>
+        <textarea class="form-control" name="content" rows="10" required placeholder="Collez ici votre description modèle…"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes (optionnel)</label>
+        <input class="form-control" name="notes" placeholder="ex: Bon exemple pour les roulottes d'entrée de gamme" />
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('modal-add').style.display='none'">Annuler</button>
+        <button type="submit" class="btn-primary"><i class="fa fa-plus"></i> Ajouter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal : modifier -->
+<div id="modal-edit" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:200;align-items:center;justify-content:center;padding:16px;">
+  <div class="card" style="width:100%;max-width:680px;margin:0;box-shadow:var(--shadow-lg);max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 style="font-size:1.1rem;font-weight:700;">Modifier l'exemple</h2>
+      <button class="btn-icon" onclick="document.getElementById('modal-edit').style.display='none'"><i class="fa fa-xmark fa-lg"></i></button>
+    </div>
+    <form method="post" id="edit-form">
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label class="form-label">Titre *</label>
+          <input class="form-control" name="title" id="edit-title" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type de véhicule</label>
+          <select class="form-control" name="vehicle_type" id="edit-type">
+            <option value="">— Tous types —</option>
+            <option>Roulotte</option><option>Fifth wheel</option><option>Motorisé</option>
+            <option>VTT</option><option>Côte-à-côte</option><option>Motoneige</option><option>Cart de golf</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description complète *</label>
+        <textarea class="form-control" name="content" id="edit-content" rows="10" required></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <input class="form-control" name="notes" id="edit-notes" />
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('modal-edit').style.display='none'">Annuler</button>
+        <button type="submit" class="btn-primary"><i class="fa fa-floppy-disk"></i> Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openEdit(id, title, vtype, content, notes) {
+  document.getElementById('edit-form').action = '/admin/examples/' + id + '/edit';
+  document.getElementById('edit-title').value = title;
+  document.getElementById('edit-type').value = vtype || '';
+  document.getElementById('edit-content').value = content;
+  document.getElementById('edit-notes').value = notes || '';
+  document.getElementById('modal-edit').style.display = 'flex';
+}
+</script>
+{% endblock %}

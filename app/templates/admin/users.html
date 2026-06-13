@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block title %}Gestion des utilisateurs{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+  <div>
+    <h1 class="page-title"><i class="fa fa-users" style="color:var(--accent);"></i> Utilisateurs</h1>
+    <p class="page-subtitle">Gérez les comptes de l'équipe</p>
+  </div>
+  <button class="btn-primary" onclick="document.getElementById('modal-create').style.display='flex'">
+    <i class="fa fa-user-plus"></i> Nouveau compte
+  </button>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Nom d'utilisateur</th>
+          <th>Nom complet</th>
+          <th>Courriel</th>
+          <th>Rôle</th>
+          <th>Statut</th>
+          <th>Créé le</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td><strong>{{ u.username }}</strong></td>
+          <td>{{ u.full_name or '—' }}</td>
+          <td class="text-muted text-sm">{{ u.email or '—' }}</td>
+          <td>
+            {% if u.role == 'admin' %}
+              <span class="badge badge-published"><i class="fa fa-shield-halved"></i> Admin</span>
+            {% else %}
+              <span class="badge badge-draft">Utilisateur</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.is_active %}
+              <span class="badge badge-approved"><i class="fa fa-circle" style="font-size:0.5rem;"></i> Actif</span>
+            {% else %}
+              <span class="badge badge-draft"><i class="fa fa-circle" style="font-size:0.5rem;"></i> Désactivé</span>
+            {% endif %}
+          </td>
+          <td class="text-muted text-sm">{{ u.created_at.strftime('%d %b %Y') }}</td>
+          <td>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              {% if u.id != user.id %}
+              <form method="post" action="/admin/users/{{ u.id }}/toggle" style="display:inline;">
+                <button type="submit" class="{% if u.is_active %}btn-danger{% else %}btn-success{% endif %} btn-sm">
+                  {% if u.is_active %}<i class="fa fa-ban"></i> Désactiver{% else %}<i class="fa fa-check"></i> Activer{% endif %}
+                </button>
+              </form>
+              {% endif %}
+              <button class="btn-secondary btn-sm" onclick="openResetModal({{ u.id }}, '{{ u.username }}')">
+                <i class="fa fa-key"></i> MDP
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal : créer utilisateur -->
+<div id="modal-create" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;">
+  <div class="card" style="width:100%;max-width:460px;margin:0;box-shadow:var(--shadow-lg);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 style="font-size:1.1rem;font-weight:700;">Nouveau compte</h2>
+      <button class="btn-icon" onclick="document.getElementById('modal-create').style.display='none'">
+        <i class="fa fa-xmark fa-lg"></i>
+      </button>
+    </div>
+    <form method="post" action="/admin/users/create">
+      <div class="form-row cols-2">
+        <div class="form-group mb-0">
+          <label class="form-label">Nom d'utilisateur *</label>
+          <input class="form-control" name="username" required placeholder="jdupont" />
+        </div>
+        <div class="form-group mb-0">
+          <label class="form-label">Rôle</label>
+          <select class="form-control" name="role">
+            <option value="user">Utilisateur</option>
+            <option value="admin">Administrateur</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group mt-16">
+        <label class="form-label">Nom complet</label>
+        <input class="form-control" name="full_name" placeholder="Jean Dupont" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Courriel</label>
+        <input class="form-control" type="email" name="email" placeholder="jdupont@vrthetford.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mot de passe *</label>
+        <input class="form-control" type="password" name="password" required placeholder="Minimum 6 caractères" />
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('modal-create').style.display='none'">Annuler</button>
+        <button type="submit" class="btn-primary"><i class="fa fa-user-plus"></i> Créer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal : réinitialiser mot de passe -->
+<div id="modal-reset" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;">
+  <div class="card" style="width:100%;max-width:380px;margin:0;box-shadow:var(--shadow-lg);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 style="font-size:1.1rem;font-weight:700;">Réinitialiser le mot de passe</h2>
+      <button class="btn-icon" onclick="document.getElementById('modal-reset').style.display='none'">
+        <i class="fa fa-xmark fa-lg"></i>
+      </button>
+    </div>
+    <p class="text-muted text-sm" style="margin-bottom:16px;">Compte : <strong id="reset-username"></strong></p>
+    <form method="post" id="reset-form">
+      <div class="form-group">
+        <label class="form-label">Nouveau mot de passe</label>
+        <input class="form-control" type="password" name="new_password" required placeholder="Nouveau mot de passe" />
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('modal-reset').style.display='none'">Annuler</button>
+        <button type="submit" class="btn-primary"><i class="fa fa-key"></i> Réinitialiser</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openResetModal(userId, username) {
+  document.getElementById('reset-username').textContent = username;
+  document.getElementById('reset-form').action = '/admin/users/' + userId + '/reset-password';
+  document.getElementById('modal-reset').style.display = 'flex';
+}
+</script>
+{% endblock %}

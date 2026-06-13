@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m venv venv)",
+      "Bash(venv/Scripts/pip install *)",
+      "Bash(python -c \"import sys; print\\(sys.version\\)\")",
+      "Bash(venv/Scripts/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8000/generate)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -L http://localhost:8000/generate)",
+      "Bash(venv/Scripts/python -c \"from app.routes import description_routes; print\\('OK'\\)\")",
+      "Bash(venv/Scripts/python -c ' *)",
+      "Bash(venv/Scripts/python -c \"from app.main import app; print\\('OK -', len\\(list\\(app.routes\\)\\), 'routes'\\)\")",
+      "Bash(curl -v http://localhost:8000/login)",
+      "Bash(mkdir -p \"E:\\\\Descrigeek\\\\.claude\" && cat \"E:\\\\Descrigeek\\\\.claude\\\\launch.json\" 2>/dev/null || echo \"not found\")",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(taskkill /F /PID 13668)",
+      "PowerShell(Stop-Process -Id 13668 -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | Sort-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Start-Sleep -Seconds 2; Write-Output \"done\")",
+      "Bash(curl -s http://localhost:8000/static/css/main.css)",
+      "Bash(curl -s http://localhost:8000/)",
+      "Bash(sed -i 's/from fastapi.templating import Jinja2Templates\\\\n//g' app/routes/*.py 2>/dev/null; echo done)",
+      "Bash(cd /mnt/e/Descrigeek && head -20 app/routes/description_routes.py)"
+    ]
+  }
+}

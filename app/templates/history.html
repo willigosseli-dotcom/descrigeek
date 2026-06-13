@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Historique{% endblock %}
+
+{% block content %}
+{% if request.query_params.get('deleted') %}
+<div class="alert alert-success"><i class="fa fa-trash"></i> Description supprimée.</div>
+{% endif %}
+<div class="page-header">
+  <h1 class="page-title"><i class="fa fa-clock-rotate-left" style="color:var(--accent);"></i> Historique des descriptions</h1>
+  <p class="page-subtitle">{% if user.role == 'admin' %}Toutes les descriptions générées{% else %}Vos descriptions générées{% endif %}</p>
+</div>
+
+<!-- Barre de recherche et filtres -->
+<div class="card" style="padding:16px;">
+  <form method="get" action="/history" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+    <div style="flex:1;min-width:200px;">
+      <label class="form-label" style="margin-bottom:4px;">Rechercher</label>
+      <div style="position:relative;">
+        <i class="fa fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+        <input class="form-control" name="q" value="{{ q }}" placeholder="No de stock, marque, modèle..."
+               style="padding-left:36px;" />
+      </div>
+    </div>
+    <div>
+      <label class="form-label" style="margin-bottom:4px;">Statut</label>
+      <select class="form-control" name="status_filter" style="width:auto;">
+        <option value="">Tous les statuts</option>
+        <option value="draft"     {% if status_filter=='draft'     %}selected{% endif %}>Brouillon</option>
+        <option value="approved"  {% if status_filter=='approved'  %}selected{% endif %}>Approuvée</option>
+        <option value="published" {% if status_filter=='published' %}selected{% endif %}>Publiée</option>
+      </select>
+    </div>
+    <button type="submit" class="btn-primary">
+      <i class="fa fa-filter"></i> Filtrer
+    </button>
+    {% if q or status_filter %}
+    <a href="/history" class="btn-secondary">
+      <i class="fa fa-xmark"></i> Effacer
+    </a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Résultats -->
+<div class="card">
+  {% if descriptions %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>No de stock</th>
+          <th>Véhicule</th>
+          <th>Type</th>
+          {% if user.role == 'admin' %}<th>Auteur</th>{% endif %}
+          <th>Statut</th>
+          <th>Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in descriptions %}
+        <tr>
+          <td>
+            <a href="/description/{{ d.id }}" style="font-family:monospace;font-weight:700;color:var(--accent);">
+              {{ d.stock_number }}
+            </a>
+          </td>
+          <td>{{ d.vehicle_year or '' }} {{ d.vehicle_make or '' }} {{ d.vehicle_model or '' }}</td>
+          <td class="text-muted text-sm">{{ d.vehicle_type or '—' }}</td>
+          {% if user.role == 'admin' %}
+          <td class="text-muted text-sm">{{ d.author }}</td>
+          {% endif %}
+          <td>
+            {% if d.status == 'draft' %}
+              <span class="badge badge-draft"><i class="fa fa-circle-half-stroke"></i> Brouillon</span>
+            {% elif d.status == 'approved' %}
+              <span class="badge badge-approved"><i class="fa fa-circle-check"></i> Approuvée</span>
+            {% else %}
+              <span class="badge badge-published"><i class="fa fa-globe"></i> Publiée</span>
+            {% endif %}
+          </td>
+          <td class="text-muted text-sm">{{ d.created_at.strftime('%d %b %Y') }}</td>
+          <td style="display:flex;gap:6px;align-items:center;">
+            <a href="/description/{{ d.id }}" class="btn-secondary btn-sm">
+              <i class="fa fa-eye"></i> Voir
+            </a>
+            <form method="post" action="/description/{{ d.id }}/delete" style="margin:0;"
+                  onsubmit="return confirm('Supprimer définitivement cette description ?\n\n{{ d.stock_number }} — {{ d.vehicle_year }} {{ d.vehicle_make }} {{ d.vehicle_model }}');">
+              <button type="submit" class="btn-delete btn-sm" title="Enwaye à Scrap">
+                <i class="fa fa-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:48px;color:var(--text-muted);">
+    <i class="fa fa-magnifying-glass" style="font-size:2.5rem;display:block;margin-bottom:12px;opacity:0.3;"></i>
+    {% if q or status_filter %}
+      Aucun résultat pour cette recherche.
+    {% else %}
+      Aucune description pour l'instant.
+      <br><a href="/generate" style="display:inline-block;margin-top:12px;">Générez votre première description →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Notification temps réel : un collègue vient de générer une description
+(function () {
+  if (!window._supabase) return;
+
+  const banner = document.createElement('div');
+  banner.className = 'alert alert-success';
+  banner.style.cssText = 'display:none;position:fixed;bottom:24px;right:24px;z-index:9999;cursor:pointer;max-width:360px;';
+  banner.innerHTML = '<i class="fa fa-bell"></i> <span id="new-desc-msg"></span> — <u>Rafraîchir</u>';
+  banner.onclick = () => location.reload();
+  document.body.appendChild(banner);
+
+  window._supabase
+    .channel('descrigeek-history')
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'descriptions_events' },
+      ({ new: r }) => {
+        if (r.username === (window.CHAT_USER && window.CHAT_USER.username)) return;
+        document.getElementById('new-desc-msg').textContent =
+          r.display_name + ' a écré : ' + r.vehicle;
+        banner.style.display = 'block';
+        setTimeout(() => { banner.style.display = 'none'; }, 12000);
+      }
+    )
+    .subscribe();
+})();
+</script>
+{% endblock %}

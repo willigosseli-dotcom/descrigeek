@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+{% block title %}{{ desc.stock_number }} — {{ desc.vehicle_year }} {{ desc.vehicle_make }} {{ desc.vehicle_model }}{% endblock %}
+
+{% block content %}
+{% set saved = request.query_params.get('saved') %}
+{% set regenerated = request.query_params.get('regenerated') %}
+
+{% if saved %}
+<div class="alert alert-success"><i class="fa fa-circle-check"></i> Description enregistrée.</div>
+{% endif %}
+{% if regenerated %}
+<div class="alert alert-success"><i class="fa fa-rotate"></i> Description régénérée avec succès.</div>
+{% endif %}
+
+{% if terminology_corrections %}
+<div class="alert alert-info" style="margin-bottom:16px;">
+  <div>
+    <strong><i class="fa fa-language"></i> Terminologie corrigée automatiquement :</strong>
+    <ul style="margin-top:6px;margin-left:20px;font-size:0.82rem;">
+      {% for c in terminology_corrections %}
+      <li>{{ c }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
+
+<!-- En-tête -->
+<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:24px;">
+  <div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+      <a href="/history" class="btn-icon" title="Retour à l'historique"><i class="fa fa-arrow-left"></i></a>
+      <form method="post" action="/description/{{ desc.id }}/delete" style="margin:0;"
+            onsubmit="return confirm('Supprimer définitivement cette description ?\n\n{{ desc.stock_number }} — {{ desc.vehicle_year }} {{ desc.vehicle_make }} {{ desc.vehicle_model }}');">
+        <button type="submit" class="btn-delete btn-sm" title="Enwaye à Scrap">
+          <i class="fa fa-trash"></i>
+        </button>
+      </form>
+      <h1 class="page-title" style="margin:0;">
+        Stock : <span style="color:var(--accent);font-family:monospace;">{{ desc.stock_number }}</span>
+      </h1>
+      {% if desc.status == 'draft' %}
+        <span class="badge badge-draft"><i class="fa fa-circle-half-stroke"></i> Brouillon</span>
+      {% elif desc.status == 'approved' %}
+        <span class="badge badge-approved"><i class="fa fa-circle-check"></i> Approuvée</span>
+      {% else %}
+        <span class="badge badge-published"><i class="fa fa-globe"></i> Publiée</span>
+      {% endif %}
+    </div>
+    <p class="text-muted text-sm">
+      {{ desc.vehicle_year }} {{ desc.vehicle_make }} {{ desc.vehicle_model }}
+      {% if desc.vehicle_type %} — {{ desc.vehicle_type }}{% endif %}
+      &nbsp;·&nbsp; Par {{ author }}
+      &nbsp;·&nbsp; {{ desc.created_at.strftime('%d %b %Y à %H:%M') }}
+    </p>
+  </div>
+  <!-- Changer le statut -->
+  <form method="post" action="/description/{{ desc.id }}/status" style="display:flex;gap:8px;align-items:center;">
+    <select name="status" class="form-control" style="width:auto;">
+      <option value="draft"     {% if desc.status=='draft'     %}selected{% endif %}>Brouillon</option>
+      <option value="approved"  {% if desc.status=='approved'  %}selected{% endif %}>Approuvée</option>
+      <option value="published" {% if desc.status=='published' %}selected{% endif %}>Publiée</option>
+    </select>
+    <button type="submit" class="btn-secondary btn-sm"><i class="fa fa-tag"></i> Changer</button>
+  </form>
+</div>
+
+<!-- Avertissements -->
+{% if desc.specs_warnings %}
+<div class="alert alert-warning" style="margin-bottom:20px;">
+  <div>
+    <strong><i class="fa fa-triangle-exclamation"></i> Points à vérifier avant publication :</strong>
+    <ul style="margin-top:8px;margin-left:20px;">
+      {% for w in desc.specs_warnings %}
+      <li>{{ w }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endif %}
+
+<!-- Source des specs -->
+{% if desc.specs_source %}
+<div class="alert alert-info" style="margin-bottom:20px;font-size:0.82rem;">
+  <i class="fa fa-circle-info"></i>
+  <span><strong>Source des spécifications :</strong> {{ desc.specs_source }}</span>
+</div>
+{% endif %}
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;">
+
+  <!-- COLONNE PRINCIPALE : Description -->
+  <div>
+    <form method="post" action="/description/{{ desc.id }}/save" id="save-form">
+
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+          <div class="card-title" style="margin:0;"><i class="fa fa-file-lines"></i> Description</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn-secondary btn-sm" id="copy-desc-btn">
+              <i class="fa fa-copy"></i> Copier
+            </button>
+            <button type="submit" form="save-form" class="btn-primary btn-sm" id="save-top-btn">
+              <i class="fa fa-floppy-disk"></i> Enregistrer
+            </button>
+            <a href="/description/{{ desc.id }}/export" class="btn-secondary btn-sm">
+              <i class="fa fa-download"></i> Exporter .txt
+            </a>
+          </div>
+        </div>
+        <!-- Contrôles d'affichage -->
+        <div class="desc-display-controls">
+          <label class="ctrl-label"><i class="fa fa-text-height"></i> Taille</label>
+          <div class="ctrl-sizes">
+            <button type="button" class="ctrl-size-btn" data-size="12" title="Très petit">A<span style="font-size:0.6em;">-</span></button>
+            <button type="button" class="ctrl-size-btn active" data-size="14" title="Normal">A</button>
+            <button type="button" class="ctrl-size-btn" data-size="17" title="Grand">A<span style="font-size:1.2em;">+</span></button>
+            <button type="button" class="ctrl-size-btn" data-size="20" title="Très grand">A<span style="font-size:1.5em;">++</span></button>
+          </div>
+          <div class="ctrl-divider"></div>
+          <label class="ctrl-label"><i class="fa fa-palette"></i> Couleur</label>
+          <div class="ctrl-colors">
+            <button type="button" class="ctrl-color-btn active" data-color="#111111" style="background:#111111;" title="Noir (défaut)"></button>
+            <button type="button" class="ctrl-color-btn" data-color="#1B9DE0" style="background:#1B9DE0;" title="Bleu VR Thetford"></button>
+            <button type="button" class="ctrl-color-btn" data-color="#dc2626" style="background:#dc2626;" title="Rouge"></button>
+            <button type="button" class="ctrl-color-btn" data-color="#ca8a04" style="background:#ca8a04;" title="Jaune"></button>
+            <label class="ctrl-color-custom" title="Couleur personnalisée">
+              <i class="fa fa-eyedropper"></i>
+              <input type="color" id="custom-text-color" value="#2c2c3e" style="width:0;height:0;opacity:0;position:absolute;" />
+            </label>
+          </div>
+        </div>
+
+        <div contenteditable="true"
+             id="desc-editor"
+             class="form-control desc-rich-editor"
+             style="font-size:14px;line-height:1.8;color:#2c2c3e;font-family:'Segoe UI',system-ui,sans-serif;"
+             spellcheck="true">{{ desc.generated_description | nl2br }}</div>
+        <input type="hidden" name="generated_description" id="desc-hidden">
+      </div>
+
+      <!-- Statut + Enregistrer -->
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <select name="status" class="form-control" style="width:auto;">
+          <option value="draft"     {% if desc.status=='draft'     %}selected{% endif %}>Brouillon</option>
+          <option value="approved"  {% if desc.status=='approved'  %}selected{% endif %}>Approuvée</option>
+          <option value="published" {% if desc.status=='published' %}selected{% endif %}>Publiée</option>
+        </select>
+        <button type="submit" class="btn-primary">
+          <i class="fa fa-floppy-disk"></i> Enregistrer les modifications
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- COLONNE DROITE : Régénérer + infos -->
+  <div>
+
+    <!-- Régénérer -->
+    <div class="card">
+      <div class="card-title"><i class="fa fa-rotate"></i> Régénérer</div>
+      <p class="text-muted text-sm" style="margin-bottom:12px;">
+        La description ne vous convient pas ? Ajoutez une consigne et régénérez.
+      </p>
+      <form method="post" action="/description/{{ desc.id }}/regenerate" id="regen-form">
+        <div class="form-group">
+          <label class="form-label">Consigne d'ajustement (optionnel)</label>
+          <textarea class="form-control" name="adjustment_note" rows="3"
+                    placeholder="ex: plus court, plus vendeur, mets l'accent sur le confort, plus sobre...">{{ desc.adjustment_note or '' }}</textarea>
+        </div>
+        <button type="submit" class="btn-primary w-full" style="justify-content:center;" id="regen-btn"
+                onclick="this.disabled=true;this.innerHTML='<i class=\'fa fa-spinner fa-spin\'></i> Génération...'">
+          <i class="fa fa-rotate"></i> Régénérer
+        </button>
+      </form>
+    </div>
+
+    <!-- Infos du véhicule -->
+    <div class="card">
+      <div class="card-title"><i class="fa fa-circle-info"></i> Informations</div>
+      <table style="width:100%;font-size:0.82rem;">
+        <tr><td class="text-muted" style="padding:4px 0;width:40%;">Stock</td>
+            <td style="font-family:monospace;font-weight:700;">{{ desc.stock_number }}</td></tr>
+        <tr><td class="text-muted" style="padding:4px 0;">Année</td><td>{{ desc.vehicle_year }}</td></tr>
+        <tr><td class="text-muted" style="padding:4px 0;">Marque</td><td>{{ desc.vehicle_make }}</td></tr>
+        <tr><td class="text-muted" style="padding:4px 0;">Modèle</td><td>{{ desc.vehicle_model }}</td></tr>
+        <tr><td class="text-muted" style="padding:4px 0;">Type</td><td>{{ desc.vehicle_type or '—' }}</td></tr>
+      </table>
+    </div>
+
+    <!-- Options saisies -->
+    {% if desc.options_accessories %}
+    <div class="card">
+      <div class="card-title" style="font-size:0.88rem;"><i class="fa fa-wrench" style="color:var(--orange);"></i> Options saisies</div>
+      <p style="font-size:0.8rem;line-height:1.6;white-space:pre-wrap;">{{ desc.options_accessories }}</p>
+    </div>
+    {% endif %}
+
+    {% if desc.unique_features %}
+    <div class="card">
+      <div class="card-title" style="font-size:0.88rem;"><i class="fa fa-star" style="color:var(--yellow);"></i> Particularités saisies</div>
+      <p style="font-size:0.8rem;line-height:1.6;white-space:pre-wrap;">{{ desc.unique_features }}</p>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  const editor    = document.getElementById('desc-editor');
+  const hidden    = document.getElementById('desc-hidden');
+  const audEditor = document.getElementById('audience-editor');
+  const audHidden = document.getElementById('audience-hidden');
+  const picker    = document.getElementById('custom-text-color');
+  const LS_KEY    = 'descrigeek_desc_display';
+
+  // ---- Sync hidden inputs avant soumission ----
+  document.getElementById('save-form')?.addEventListener('submit', () => {
+    hidden.value    = editorToPlain(editor);
+    audHidden.value = editorToPlain(audEditor);
+  });
+
+  function editorToPlain(el) {
+    let html = el.innerHTML;
+    html = html.replace(/<br\s*\/?>/gi, '\n');
+    html = html.replace(/<\/p>/gi, '\n\n');
+    html = html.replace(/<[^>]+>/g, '');
+    const d = document.createElement('div');
+    d.innerHTML = html;
+    return (d.textContent || d.innerText || '').trim();
+  }
+
+  // ---- Boutons Copier ----
+  document.getElementById('copy-desc-btn')?.addEventListener('click', function() {
+    navigator.clipboard.writeText(editorToPlain(editor)).then(() => {
+      this.innerHTML = '<i class="fa fa-check"></i> Copié !';
+      setTimeout(() => { this.innerHTML = '<i class="fa fa-copy"></i> Copier'; }, 2000);
+    });
+  });
+  document.getElementById('copy-audience-btn')?.addEventListener('click', function() {
+    navigator.clipboard.writeText(editorToPlain(audEditor)).then(() => {
+      this.innerHTML = '<i class="fa fa-check"></i> Copié !';
+      setTimeout(() => { this.innerHTML = '<i class="fa fa-copy"></i> Copier'; }, 2000);
+    });
+  });
+
+  // ---- Sélection courante au moment du mousedown (avant le blur) ----
+  // On capture la sélection dans mousedown car c'est le seul moment
+  // où elle est encore active avant que le focus quitte l'éditeur.
+  let capturedSel = null;
+
+  document.querySelector('.desc-display-controls')?.addEventListener('mousedown', e => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && !sel.getRangeAt(0).collapsed) {
+      capturedSel = sel.getRangeAt(0).cloneRange();
+    } else {
+      capturedSel = null;
+    }
+    // Empêche le blur de l'éditeur (conserve la sélection visible aussi)
+    e.preventDefault();
+  });
+
+  // ---- Appliquer couleur ----
+  function applyColor(color) {
+    if (capturedSel && !capturedSel.collapsed) {
+      // Rétablir la sélection puis appliquer la couleur uniquement sur elle
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(capturedSel);
+      document.execCommand('styleWithCSS', false, true);
+      document.execCommand('foreColor', false, color);
+    } else {
+      editor.style.color = color;
+    }
+    if (picker) picker.value = color;
+  }
+
+  // ---- Appliquer taille de police ----
+  function applySize(px) {
+    if (capturedSel && !capturedSel.collapsed) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(capturedSel);
+      const range = sel.getRangeAt(0);
+      try {
+        const span = document.createElement('span');
+        span.style.fontSize = px + 'px';
+        range.surroundContents(span);
+      } catch {
+        // Sélection multi-nœuds : insertHTML
+        const text = range.toString();
+        document.execCommand('insertHTML', false,
+          `<span style="font-size:${px}px">${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`
+        );
+      }
+    } else {
+      editor.style.fontSize = px + 'px';
+    }
+  }
+
+  // ---- Préférences globales depuis localStorage ----
+  const LS = JSON.parse(localStorage.getItem(LS_KEY) || '{}');
+  if (LS.fontSize) editor.style.fontSize = LS.fontSize + 'px';
+  if (LS.color)    { editor.style.color = LS.color; if (picker) picker.value = LS.color; }
+
+  function markSizeActive(size) {
+    document.querySelectorAll('.ctrl-size-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.size) === size);
+    });
+  }
+  if (LS.fontSize) markSizeActive(LS.fontSize);
+
+  function markColorActive(color) {
+    document.querySelectorAll('.ctrl-color-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.color === color);
+    });
+  }
+  if (LS.color) markColorActive(LS.color);
+
+  // ---- Boutons de taille ----
+  document.querySelectorAll('.ctrl-size-btn').forEach(btn => {
+    const size = parseInt(btn.dataset.size);
+    btn.addEventListener('click', () => {
+      applySize(size);
+      markSizeActive(size);
+      if (!capturedSel || capturedSel.collapsed) {
+        localStorage.setItem(LS_KEY, JSON.stringify({...LS, fontSize: size}));
+      }
+      capturedSel = null;
+    });
+  });
+
+  // ---- Boutons de couleur ----
+  document.querySelectorAll('.ctrl-color-btn').forEach(btn => {
+    const color = btn.dataset.color;
+    btn.addEventListener('click', () => {
+      applyColor(color);
+      markColorActive(color);
+      if (!capturedSel || capturedSel.collapsed) {
+        localStorage.setItem(LS_KEY, JSON.stringify({...LS, color}));
+      }
+      capturedSel = null;
+    });
+  });
+
+  // ---- Pipette ----
+  if (picker) {
+    picker.addEventListener('input', () => {
+      applyColor(picker.value);
+      document.querySelectorAll('.ctrl-color-btn').forEach(b => b.classList.remove('active'));
+      capturedSel = null;
+    });
+  }
+})();
+</script>
+{% endblock %}

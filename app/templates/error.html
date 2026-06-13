@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Erreur {{ code }}{% endblock %}
+{% block content %}
+<div class="error-page">
+  <div class="error-code">{{ code }}</div>
+  <div class="error-msg">{{ message }}</div>
+  <a href="/dashboard" class="btn-primary mt-16"><i class="fa fa-house"></i> Retour au tableau de bord</a>
+</div>
+{% endblock %}
+{% block public_content %}
+<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;flex-direction:column;gap:16px;text-align:center;padding:24px;">
+  <div class="error-code">{{ code }}</div>
+  <div class="error-msg">{{ message }}</div>
+  <a href="/" class="btn-primary mt-16"><i class="fa fa-house"></i> Retour à l'accueil</a>
+</div>
+{% endblock %}
