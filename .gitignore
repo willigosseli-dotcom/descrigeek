@@ -16,6 +16,9 @@ data/
 *.db-shm
 *.db-wal
 
+# Garder les logos même si dans data/ (ils sont maintenant dans app/static/logos/)
+!app/static/logos/
+
 # Fichiers système
 .DS_Store
 Thumbs.db
