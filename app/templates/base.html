@@ -118,11 +118,9 @@
 {% endif %}
 
 <script src="/static/js/main.js"></script>
-{% block scripts %}{% endblock %}
 
 {% if user %}
 <!-- ═══ CHAT D'ÉQUIPE ═══ -->
-<!-- Panel de chat (positionné sous le bouton en haut à droite) -->
 <div id="chat-panel" class="chat-panel" style="display:none;">
   <div class="chat-header">
     <span><i class="fa fa-comments"></i> Chat d'équipe</span>
@@ -141,7 +139,7 @@
   </form>
 </div>
 
-<!-- Variables passées à JS -->
+<!-- Variables et services globaux — chargés AVANT {% block scripts %} -->
 <script>
 window.CHAT_USER = {
   username:    "{{ user.username }}",
@@ -152,20 +150,24 @@ window.CHAT_USER = {
 <script src="/static/js/supabaseClient.js?v=1"></script>
 <script src="/static/js/avatarService.js?v=2"></script>
 <script src="/static/js/chatService.js?v=2"></script>
-<script src="/static/js/chat.js?v=3"></script>
 <script>
-// Initialiser l'avatar du header dès le chargement
+// Initialiser l'avatar du header
 (function() {
   if (!window.AvatarService || !window.CHAT_USER) return;
   const svc = window._avatarSvc = new AvatarService();
   const img = document.getElementById('header-avatar');
   if (img) img.src = svc.getAvatar(window.CHAT_USER.username);
-  // Mettre à jour si l'avatar change (ex. depuis l'onglet profil)
   svc.onUpdate((username, dataUrl) => {
     if (username === window.CHAT_USER.username && img) img.src = dataUrl;
   });
 })();
 </script>
+{% endif %}
+
+{% block scripts %}{% endblock %}
+
+{% if user %}
+<script src="/static/js/chat.js?v=3"></script>
 {% endif %}
 </body>
 </html>
