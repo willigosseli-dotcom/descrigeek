@@ -24,6 +24,9 @@ app = FastAPI(title="DescriGeek", lifespan=lifespan)
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, max_age=86400)
 
+os.makedirs("data/assets", exist_ok=True)
+os.makedirs("data/uploads", exist_ok=True)
+
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.mount("/assets", StaticFiles(directory="data/assets"), name="assets")
 
