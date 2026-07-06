@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Importer les données{% endblock %}
+
+{% block head %}
+<style>
+  .dropzone {
+    border:2.5px dashed var(--border); border-radius:14px; padding:44px 24px;
+    text-align:center; background:var(--bg); cursor:pointer; transition:all .15s;
+  }
+  .dropzone.dragover { border-color:var(--accent); background:rgba(27,157,224,.06); }
+  .dropzone i.fa-cloud-arrow-up { font-size:2.6rem; color:var(--accent); margin-bottom:10px; }
+  .dropzone .filename { margin-top:12px; font-weight:700; color:var(--accent); }
+  .resume-grid { display:flex; flex-wrap:wrap; gap:24px; margin:6px 0 4px; }
+  .resume-box .val { font-size:1.7rem; font-weight:800; }
+  .resume-box .lbl { font-size:.78rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><i class="fa fa-file-import" style="color:var(--accent);"></i> Importer les données</h1>
+  <p class="page-subtitle">Glissez votre CSV maître d'annonces. Il remplace/complète la base par url d'annonce.</p>
+</div>
+
+{% if erreur %}
+<div class="card" style="border-left:4px solid #d21f26;">
+  <p style="margin:0;"><i class="fa fa-triangle-exclamation" style="color:#d21f26;"></i> <strong>Import refusé :</strong> {{ erreur }}</p>
+</div>
+{% endif %}
+
+{% if resume %}
+<div class="card" style="border-left:4px solid #2e9e4f;">
+  <div class="card-title"><i class="fa fa-circle-check" style="color:#2e9e4f;"></i> Import réussi</div>
+  <div class="resume-grid">
+    <div class="resume-box"><div class="val">{{ resume.nb_importees }}</div><div class="lbl">Annonces importées</div></div>
+    <div class="resume-box"><div class="val" style="color:#2e9e4f;">{{ resume.nb_creees }}</div><div class="lbl">Nouvelles</div></div>
+    <div class="resume-box"><div class="val">{{ resume.nb_maj }}</div><div class="lbl">Mises à jour</div></div>
+    <div class="resume-box"><div class="val" style="color:#d21f26;">{{ resume.nb_disparues }}</div><div class="lbl">Disparues</div></div>
+    <div class="resume-box"><div class="val" style="color:#e07b00;">{{ resume.nb_baisses }}</div><div class="lbl">Baisses de prix</div></div>
+  </div>
+  {% if resume.baisses %}
+  <div class="table-wrap" style="margin-top:16px;">
+    <table>
+      <thead><tr><th>Modèle</th><th>Avant</th><th>Après</th><th>Baisse</th><th></th></tr></thead>
+      <tbody>
+        {% for b in resume.baisses %}
+        <tr>
+          <td>{{ b.modele or '—' }}</td>
+          <td>{{ "{:,}".format(b.avant).replace(",", " ") }} $</td>
+          <td><strong>{{ "{:,}".format(b.apres).replace(",", " ") }} $</strong></td>
+          <td style="color:#d21f26;">− {{ "{:,}".format(b.baisse).replace(",", " ") }} $</td>
+          <td><a href="{{ b.url }}" target="_blank" rel="noopener" class="text-muted"><i class="fa fa-arrow-up-right-from-square"></i></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+  <form method="post" action="/importer" enctype="multipart/form-data" id="import-form">
+    <label class="dropzone" id="dropzone" for="fichier">
+      <i class="fa fa-cloud-arrow-up"></i>
+      <div style="font-weight:700; font-size:1.05rem;">Glissez votre fichier CSV ici</div>
+      <div class="text-muted text-sm" style="margin-top:4px;">ou cliquez pour choisir un fichier (.csv, UTF-8, 19 colonnes)</div>
+      <div class="filename" id="filename"></div>
+      <input type="file" name="fichier" id="fichier" accept=".csv,text/csv" required style="display:none;" />
+    </label>
+    <div style="margin-top:16px; display:flex; gap:12px; align-items:center;">
+      <button type="submit" class="btn-primary btn-lg" id="import-btn">
+        <i class="fa fa-file-import"></i> Importer
+      </button>
+      <span class="text-muted text-sm">Base actuelle : <strong>{{ nb_total }}</strong> annonce(s).</span>
+    </div>
+  </form>
+</div>
+
+{% if historique %}
+<div class="card">
+  <div class="card-title"><i class="fa fa-clock-rotate-left"></i> Derniers imports</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Fichier</th><th>Importées</th><th>Disparues</th><th>Baisses</th></tr></thead>
+      <tbody>
+        {% for h in historique %}
+        <tr>
+          <td>{{ h.imported_at.strftime("%d %b %Y %H:%M") }}</td>
+          <td class="text-muted">{{ h.nom_fichier or '—' }}</td>
+          <td>{{ h.nb_importees }}</td>
+          <td>{{ h.nb_disparues }}</td>
+          <td>{{ h.nb_baisses }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const dz = document.getElementById('dropzone');
+const input = document.getElementById('fichier');
+const fname = document.getElementById('filename');
+
+input.addEventListener('change', () => {
+  fname.textContent = input.files.length ? input.files[0].name : '';
+});
+['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => {
+  e.preventDefault(); dz.classList.add('dragover');
+}));
+['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => {
+  e.preventDefault(); dz.classList.remove('dragover');
+}));
+dz.addEventListener('drop', e => {
+  if (e.dataTransfer.files.length) {
+    input.files = e.dataTransfer.files;
+    fname.textContent = input.files[0].name;
+  }
+});
+document.getElementById('import-form').addEventListener('submit', () => {
+  const btn = document.getElementById('import-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Import en cours...';
+});
+</script>
+{% endblock %}

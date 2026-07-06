@@ -78,6 +78,24 @@
           <i class="fa fa-clock-rotate-left"></i><span>Historique</span>
         </a>
       </li>
+      <li class="nav-section-title">Évaluation de prix</li>
+      <li>
+        <a href="/evaluer" class="nav-item {% if request.url.path == '/evaluer' %}active{% endif %}">
+          <i class="fa fa-tags"></i><span>Évaluer un véhicule</span>
+        </a>
+      </li>
+      {% if user.role == 'admin' %}
+      <li>
+        <a href="/importer" class="nav-item {% if '/importer' in request.url.path %}active{% endif %}">
+          <i class="fa fa-file-import"></i><span>Importer données</span>
+        </a>
+      </li>
+      <li>
+        <a href="/evaluer/reglages" class="nav-item {% if '/evaluer/reglages' in request.url.path %}active{% endif %}">
+          <i class="fa fa-scale-balanced"></i><span>Réglages évaluation</span>
+        </a>
+      </li>
+      {% endif %}
       {% if user.role == 'admin' %}
       <li class="nav-section-title">Administration</li>
       <li>

@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Évaluer un véhicule{% endblock %}
+
+{% block head %}
+<style>
+  .type-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+  .type-tab {
+    padding:10px 18px; border-radius:10px; border:1.5px solid var(--border);
+    background:var(--bg); font-weight:600; cursor:pointer; font-size:0.9rem;
+    color:var(--text); transition:all .12s;
+  }
+  .type-tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .type-tab.disabled {
+    opacity:.4; cursor:not-allowed; background:var(--bg);
+  }
+  .type-tab .fa-lock { font-size:.7rem; margin-left:5px; }
+  .btn-evaluer {
+    background:#d21f26; color:#fff; border:none; border-radius:12px;
+    padding:16px 48px; font-size:1.25rem; font-weight:800; letter-spacing:.05em;
+    cursor:pointer; box-shadow:0 4px 14px rgba(210,31,38,.35); transition:all .12s;
+  }
+  .btn-evaluer:hover { background:#b31a20; transform:translateY(-1px); }
+  .stat-grid { display:flex; flex-wrap:wrap; gap:24px; margin:12px 0; }
+  .stat-box { min-width:120px; }
+  .stat-box .val { font-size:1.6rem; font-weight:800; color:var(--accent); }
+  .stat-box .lbl { font-size:.78rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; }
+  .badge-niveau { font-size:.7rem; padding:2px 8px; border-radius:20px; background:var(--bg); border:1px solid var(--border); white-space:nowrap; }
+  .badge-exclu { font-size:.7rem; padding:2px 8px; border-radius:20px; background:#fff3cd; color:#8a6d00; border:1px solid #ffe08a; white-space:nowrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><i class="fa fa-tags" style="color:var(--accent);"></i> Évaluer un véhicule</h1>
+  <p class="page-subtitle">Analyse de marché d'un modèle à partir de vos annonces comparables</p>
+</div>
+
+<form method="post" action="/evaluer" id="eval-form">
+  <input type="hidden" name="type_unite" id="type_unite" value="{{ type_actif }}" />
+
+  <div class="card">
+    <div class="card-title"><i class="fa fa-truck-moving"></i> Type de véhicule</div>
+    <div class="type-tabs">
+      {% for o in onglets %}
+        {% if o.actif %}
+        <div class="type-tab {% if o.cle == type_actif %}active{% endif %}"
+             data-type="{{ o.cle }}" onclick="choisirType(this)">{{ o.libelle }}</div>
+        {% else %}
+        <div class="type-tab disabled" title="Bientôt disponible">
+          {{ o.libelle }} <i class="fa fa-lock"></i>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label class="form-label">Marque</label>
+        <input class="form-control" name="marque" placeholder="ex : Forest River"
+               value="{{ form.marque if form else '' }}" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ligne (gamme)</label>
+        <input class="form-control" name="ligne" placeholder="ex : Rockwood Mini Lite"
+               value="{{ form.ligne if form else '' }}" />
+      </div>
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group mb-0">
+        <label class="form-label">Modèle (plancher)</label>
+        <input class="form-control" name="modele" placeholder="ex : 2205S"
+               value="{{ form.modele if form else '' }}" />
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label">Année</label>
+        <input class="form-control" type="number" name="annee" min="1980" max="2035"
+               placeholder="ex : 2021" value="{{ form.annee if form else '' }}" />
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin:8px 0 28px;">
+    <button type="submit" class="btn-evaluer"><i class="fa fa-magnifying-glass-dollar"></i> ÉVALUER</button>
+  </div>
+</form>
+
+{% if resultat %}
+<!-- ======================= RÉSULTATS ======================= -->
+{% if resultat.message %}
+<div class="card" style="border-left:4px solid var(--accent);">
+  <p style="margin:0;"><i class="fa fa-circle-info" style="color:var(--accent);"></i> {{ resultat.message }}</p>
+</div>
+{% endif %}
+
+{% if resultat.stats.n > 0 %}
+<div class="card">
+  <div class="card-title"><i class="fa fa-chart-line"></i> Analyse de marché du modèle</div>
+  <p style="font-size:1.05rem; font-weight:600; margin-bottom:8px;">{{ resultat.phrase }}</p>
+  <div class="stat-grid">
+    <div class="stat-box"><div class="val">{{ "{:,}".format(resultat.stats.mediane).replace(",", " ") }} $</div><div class="lbl">Prix médian</div></div>
+    <div class="stat-box"><div class="val">{{ "{:,}".format(resultat.stats.minimum).replace(",", " ") }}–{{ "{:,}".format(resultat.stats.maximum).replace(",", " ") }} $</div><div class="lbl">Fourchette min–max</div></div>
+    <div class="stat-box"><div class="val">{{ "{:,}".format(resultat.stats.p25).replace(",", " ") }}–{{ "{:,}".format(resultat.stats.p75).replace(",", " ") }} $</div><div class="lbl">Zone P25–P75</div></div>
+    <div class="stat-box"><div class="val">{{ resultat.stats.n }}</div><div class="lbl">Annonces retenues</div></div>
+  </div>
+  {% if resultat.nuances %}
+  <ul style="margin:12px 0 0; padding-left:20px; color:var(--text-muted); font-size:.9rem;">
+    {% for n in resultat.nuances %}<li style="margin-bottom:4px;">{{ n }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if comparables %}
+<div class="card">
+  <div class="card-title"><i class="fa fa-list"></i> Comparables en exemple ({{ comparables|length }})</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Véhicule</th><th>Année</th><th>Prix</th><th>Vendeur</th>
+          <th>Ville</th><th>Correspondance</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in comparables %}
+        <tr {% if c.exclusion %}style="background:#fffdf5;"{% endif %}>
+          <td>
+            <strong>{{ c.l.marque or '' }} {{ c.l.ligne or '' }}</strong><br>
+            <span class="text-muted">{{ c.l.modele or '' }}</span>
+          </td>
+          <td>{{ c.l.annee or '—' }}</td>
+          <td>
+            {% if c.l.prix_affiche %}<strong>{{ "{:,}".format(c.l.prix_affiche).replace(",", " ") }} $</strong>
+            {% else %}<span class="text-muted">sur demande</span>{% endif %}
+            {% if c.exclusion %}<br><span class="badge-exclu">{{ c.exclusion }}</span>{% endif %}
+          </td>
+          <td>{{ c.l.type_vendeur or '—' }}</td>
+          <td>{{ c.l.ville or '—' }}</td>
+          <td><span class="badge-niveau">{{ c.niveau }}</span></td>
+          <td>
+            {% if c.l.url_annonce %}
+            <a href="{{ c.l.url_annonce }}" target="_blank" rel="noopener" class="btn-secondary" style="padding:5px 10px; font-size:.8rem;">
+              <i class="fa fa-arrow-up-right-from-square"></i> Voir
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function choisirType(el) {
+  document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('type_unite').value = el.dataset.type;
+}
+</script>
+{% endblock %}

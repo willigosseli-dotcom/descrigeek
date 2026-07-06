@@ -1,0 +1,14 @@
+type_unite,marque,ligne,modele,annee,prix_affiche,vendeur,type_vendeur,localisation,longueur_pi,kilometrage,etat_declare,extensions,url_annonce,date_collecte,date_derniere_observation,statut,ancien_prix,notes
+Roulotte,Forest River,Rockwood Mini Lite,2205S,2021,32900,VR Québec,Concessionnaire,"Québec, QC",22,N/D,Bon,1,https://exemple.ca/a/1,2026-06-01,2026-06-20,active,N/D,
+Roulotte,Forest River,Rockwood Mini Lite,2205S,2020,29900,Jean Tremblay,Particulier,"Lévis, QC",22,N/D,Bon,1,https://exemple.ca/a/2,2026-06-01,2026-06-20,active,N/D,
+Roulotte,Forest River,Rockwood Mini Lite,2205S,2022,34 900,VR Mauricie,Concessionnaire,"Trois-Rivières, QC",22,N/D,Excellent,1,https://exemple.ca/a/3,2026-06-01,2026-06-20,active,N/D,
+Roulotte,Forest River,Rockwood Mini Lite,2205S,2021,30000,US Trailers,Concessionnaire,"Plattsburgh, NY",22,N/D,Bon,1,https://exemple.ca/a/4,2026-06-01,2026-06-20,active,N/D,Prix en USD
+Roulotte,Forest River,Rockwood Mini Lite,2205S,2021,N/D,Marc L.,Particulier,"Drummondville, QC",22,N/D,Bon,1,https://exemple.ca/a/5,2026-06-01,2026-06-20,active,N/D,Prix sur demande
+Roulotte,Forest River,Rockwood Mini Lite,2205S,2021,15000,Inconnu,Particulier,"Montréal, QC",22,N/D,N/D,1,https://exemple.ca/a/6,2026-06-01,2026-06-20,active,N/D,Annonce VOLÉE signalée aux autorités
+Roulotte,Forest River,Rockwood Mini Lite,2205S,2019,12000,Bricoleur,Particulier,"Joliette, QC",22,N/D,Endommagé,1,https://exemple.ca/a/7,2026-06-01,2026-06-20,active,N/D,Projet bricoleur à rénover
+Roulotte,Forest River,Rockwood Mini Lite,2205S,2021,32900,VR Québec,Concessionnaire,"Québec, QC",22,N/D,Bon,1,https://exemple.ca/a/8,2026-06-01,2026-06-20,active,N/D,Doublon probable de l'annonce 1
+Roulotte,Forest River,Rockwood Mini Lite,2205S,2021,31000,VR Thetford,Particulier,"Thetford Mines, QC",22,N/D,Bon,1,https://facebook.com/marketplace/item/999,2026-06-01,2026-06-20,active,N/D,
+Roulotte,Forest River,Rockwood Mini Lite,2205S,2021,31900,VR Estrie,Concessionnaire,"Magog, QC",22,N/D,Bon,1,https://exemple.ca/a/10,2026-06-01,2026-06-20,active,35900,Prix régulier 35 900 barré rabais
+Roulotte,Forest River,Rockwood Mini Lite,2109S,2021,28900,VR Sherbrooke,Concessionnaire,"Sherbrooke, QC",21,N/D,Bon,1,https://exemple.ca/a/11,2026-06-01,2026-06-20,active,N/D,
+Fifth wheel,Keystone,Montana,3761FL,2020,78 900,VR Outaouais,Concessionnaire,"Gatineau, QC",40,N/D,Bon,4,https://exemple.ca/a/12,2026-06-01,2026-06-20,active,N/D,
+Fifth wheel,Keystone,Montana,3761FL,2021,"82,900",Luc Gagné,Particulier,"Saguenay, QC",40,N/D,Excellent,4,https://exemple.ca/a/13,2026-06-01,2026-06-20,active,N/D,

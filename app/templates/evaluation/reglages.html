@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Réglages d'évaluation{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><i class="fa fa-scale-balanced" style="color:var(--accent);"></i> Réglages d'évaluation</h1>
+  <p class="page-subtitle">Paramètres du moteur de comparables — réglés une fois</p>
+</div>
+
+{% if enregistre %}
+<div class="card" style="border-left:4px solid #2e9e4f;">
+  <p style="margin:0;"><i class="fa fa-circle-check" style="color:#2e9e4f;"></i> Réglages enregistrés.</p>
+</div>
+{% endif %}
+
+<div class="card">
+  <form method="post" action="/evaluer/reglages">
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label class="form-label">Fenêtre d'années (±)</label>
+        <p class="form-hint">Écart d'année privilégié pour les comparables.</p>
+        <input class="form-control" type="number" name="fenetre_annees" min="0" max="10"
+               value="{{ settings.fenetre_annees }}" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tolérance de longueur (pi)</label>
+        <p class="form-hint">Pour le repli « gabarit similaire ».</p>
+        <input class="form-control" type="number" step="0.5" name="tolerance_longueur_pi" min="0"
+               value="{{ settings.tolerance_longueur_pi }}" />
+      </div>
+    </div>
+
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label class="form-label">Pondération particulier vs concession (%)</label>
+        <p class="form-hint">Écart type observé entre prix de particulier et de concessionnaire (informatif dans les nuances).</p>
+        <input class="form-control" type="number" name="ponderation_particulier_pct" min="0" max="100"
+               value="{{ settings.ponderation_particulier_pct }}" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Décote « projet bricoleur » (%)</label>
+        <p class="form-hint">Décote appliquée si les projets bricoleur sont inclus.</p>
+        <input class="form-control" type="number" name="decote_bricoleur_pct" min="0" max="100"
+               value="{{ settings.decote_bricoleur_pct }}" />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:600;">
+        <input type="checkbox" name="inclure_projets_bricoleur" value="true"
+               style="width:16px; height:16px; accent-color:var(--accent);"
+               {% if settings.inclure_projets_bricoleur %}checked{% endif %} />
+        Inclure les projets bricoleur dans les médianes (avec décote)
+      </label>
+      <p class="form-hint">Par défaut décoché : les projets bricoleur sont exclus des calculs.</p>
+    </div>
+
+    <button type="submit" class="btn-primary"><i class="fa fa-floppy-disk"></i> Enregistrer</button>
+  </form>
+</div>
+{% endblock %}
