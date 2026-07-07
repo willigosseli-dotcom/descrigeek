@@ -18,7 +18,7 @@
     <div class="form-row cols-2">
       <div class="form-group">
         <label class="form-label">Fenêtre d'années (±)</label>
-        <p class="form-hint">Écart d'année privilégié pour les comparables.</p>
+        <p class="form-hint">Écart d'année <strong>maximal</strong> pour un comparable. Au-delà, l'annonce est exclue (ex. ±2 → un 2015 ne montre que 2013–2017).</p>
         <input class="form-control" type="number" name="fenetre_annees" min="0" max="10"
                value="{{ settings.fenetre_annees }}" />
       </div>

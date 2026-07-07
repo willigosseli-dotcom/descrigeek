@@ -43,6 +43,7 @@ async def do_evaluer(
     ligne: str = Form(""),
     modele: str = Form(""),
     annee: str = Form(""),
+    longueur_pi: str = Form(""),
     user=Depends(require_login),
     db: AsyncSession = Depends(get_db),
 ):
@@ -54,6 +55,11 @@ async def do_evaluer(
         annee_int = int(annee) if annee.strip() else None
     except ValueError:
         annee_int = None
+
+    try:
+        longueur_val = float(longueur_pi.replace(",", ".")) if longueur_pi.strip() else None
+    except ValueError:
+        longueur_val = None
 
     settings = await eval_settings.get_settings(db)
 
@@ -73,17 +79,19 @@ async def do_evaluer(
         ligne=ligne.strip() or None,
         modele=modele.strip() or None,
         annee=annee_int,
+        longueur_pi=longueur_val,
         fenetre_annees=settings.fenetre_annees,
         tolerance_longueur=settings.tolerance_longueur_pi,
         inclure_bricoleur=settings.inclure_projets_bricoleur,
     )
 
-    # Étiqueter chaque comparable : niveau de correspondance + raison d'exclusion éventuelle
+    # Étiqueter chaque comparable : niveau de correspondance + raison d'exclusion éventuelle.
+    # On réutilise la longueur de référence (saisie ou déduite) pour bien détecter le gabarit.
     comparables_affichage = []
     for c in resultat["comparables"]:
         niveau = engine._niveau_correspondance(
             c, modele.strip() or None, ligne.strip() or None,
-            None, settings.tolerance_longueur_pi,
+            resultat.get("longueur_cible"), settings.tolerance_longueur_pi,
         )
         comparables_affichage.append({
             "l": c,
@@ -95,7 +103,8 @@ async def do_evaluer(
         "request": request, "user": user,
         "onglets": TYPES_ONGLETS,
         "type_actif": type_unite,
-        "form": {"marque": marque, "ligne": ligne, "modele": modele, "annee": annee},
+        "form": {"marque": marque, "ligne": ligne, "modele": modele,
+                 "annee": annee, "longueur_pi": longueur_pi},
         "resultat": resultat,
         "comparables": comparables_affichage,
     })

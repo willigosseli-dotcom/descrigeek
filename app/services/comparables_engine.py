@@ -208,20 +208,49 @@ def selectionner_comparables(
     # 3. Dédoublonner
     pool = dedoublonner(pool)
 
-    # 4. Ne garder que les annonces correspondant à un niveau de priorité
+    # 4. Ne garder que les annonces correspondant à un niveau de priorité,
+    #    ET dans la fenêtre d'années demandée (filtre STRICT : hors fenêtre = exclu).
     candidats = []
     for l in pool:
         niveau = _niveau_correspondance(l, modele, ligne, longueur_pi, tolerance_longueur)
         if niveau is None:
             continue
-        ecart_annee = abs((_get(l, "annee") or annee or 0) - annee) if annee else 0
-        hors_fenetre = 1 if (annee and ecart_annee > fenetre_annees) else 0
-        candidats.append((niveau, hors_fenetre, ecart_annee, l))
+        la = _get(l, "annee")
+        if annee and la is not None and abs(la - annee) > fenetre_annees:
+            continue  # p. ex. un 2024 pour une demande 2015 → écarté
+        ecart_annee = abs(la - annee) if (annee and la is not None) else 0
+        candidats.append((niveau, ecart_annee, l))
 
-    # 5. Trier : meilleur niveau, puis dans la fenêtre d'année, puis écart d'année
-    candidats.sort(key=lambda t: (t[0], t[1], t[2]))
+    # 5. Trier : meilleur niveau (modèle → ligne → gabarit), puis année la plus proche
+    candidats.sort(key=lambda t: (t[0], t[1]))
 
-    return [t[3] for t in candidats[:max_resultats]]
+    return [t[2] for t in candidats[:max_resultats]]
+
+
+def longueur_cible(listings: Iterable, *, type_unite: Optional[str] = None,
+                   modele: Optional[str] = None, ligne: Optional[str] = None,
+                   longueur_pi: Optional[float] = None) -> Optional[float]:
+    """Longueur de référence du véhicule demandé.
+
+    Si l'utilisateur ne l'a pas saisie, on la déduit des annonces existantes du
+    même modèle (puis de la même ligne). Cela permet ensuite de trouver des
+    roulottes d'AUTRES marques de gabarit équivalent (même type + longueur proche).
+    """
+    if longueur_pi is not None:
+        return longueur_pi
+    cands = list(listings)
+    if type_unite:
+        cands = [l for l in cands if _norm(_get(l, "type_unite")) == _norm(type_unite)]
+    for critere, valeur in (("modele", modele), ("ligne", ligne)):
+        if not valeur:
+            continue
+        longueurs = [
+            _get(l, "longueur_pi") for l in cands
+            if _norm(_get(l, critere)) == _norm(valeur) and _get(l, "longueur_pi") is not None
+        ]
+        if longueurs:
+            return statistics.median(longueurs)
+    return None
 
 
 # --------------------------------------------------------------------------- #
@@ -313,13 +342,19 @@ def evaluer(
     Retourne un dictionnaire prêt pour l'affichage. Si aucun comparable fiable,
     `stats.n == 0` et `message` explique la situation (jamais de plantage).
     """
+    # Longueur de référence : saisie par l'utilisateur, sinon déduite des annonces
+    # du même modèle/ligne — sert à trouver les équivalents d'autres marques.
+    lg_cible = longueur_cible(
+        listings, type_unite=type_unite, modele=modele, ligne=ligne, longueur_pi=longueur_pi,
+    )
+
     comparables = selectionner_comparables(
         listings,
         type_unite=type_unite,
         modele=modele,
         ligne=ligne,
         annee=annee,
-        longueur_pi=longueur_pi,
+        longueur_pi=lg_cible,
         fenetre_annees=fenetre_annees,
         tolerance_longueur=tolerance_longueur,
         inclure_bricoleur=inclure_bricoleur,
@@ -347,4 +382,5 @@ def evaluer(
         "phrase": phrase_lecture(stats),
         "message": message,
         "niveau_libelle": LIBELLE_NIVEAU,
+        "longueur_cible": lg_cible,
     }

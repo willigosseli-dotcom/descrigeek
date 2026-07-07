@@ -65,7 +65,7 @@
                value="{{ form.ligne if form else '' }}" />
       </div>
     </div>
-    <div class="form-row cols-2">
+    <div class="form-row cols-3">
       <div class="form-group mb-0">
         <label class="form-label">Modèle (plancher)</label>
         <input class="form-control" name="modele" placeholder="ex : 2205S"
@@ -76,7 +76,18 @@
         <input class="form-control" type="number" name="annee" min="1980" max="2035"
                placeholder="ex : 2021" value="{{ form.annee if form else '' }}" />
       </div>
+      <div class="form-group mb-0">
+        <label class="form-label">Longueur (pi) <span class="text-muted" style="font-weight:400;">— optionnel</span></label>
+        <input class="form-control" type="number" step="0.5" name="longueur_pi" min="0" max="60"
+               placeholder="ex : 22" value="{{ form.longueur_pi if form else '' }}" />
+      </div>
     </div>
+    <p class="form-hint" style="margin-top:10px;">
+      <i class="fa fa-circle-info" style="color:var(--accent);"></i>
+      L'analyse inclut des roulottes d'<strong>autres marques de gabarit équivalent</strong>
+      (même type et longueur proche). La longueur est déduite automatiquement de vos annonces
+      du même modèle si vous ne la saisissez pas.
+    </p>
   </div>
 
   <div style="text-align:center; margin:8px 0 28px;">

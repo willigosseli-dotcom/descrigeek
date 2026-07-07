@@ -148,3 +148,67 @@ def test_filtre_par_type_unite():
     ]
     res = engine.evaluer(listings, type_unite="Roulotte", modele="2205S", annee=2021)
     assert all(c.type_unite == "Roulotte" for c in res["comparables"])
+
+
+# --------------------------------------------------------------------------- #
+# Restriction par année (filtre STRICT)
+# --------------------------------------------------------------------------- #
+
+def test_annee_hors_fenetre_exclue():
+    # Demande 2015 : un 2024 ne doit JAMAIS apparaître (fenêtre ±2 → 2013–2017)
+    listings = [
+        _listing(url_annonce="u1", annee=2015, prix_affiche=20000, ville="A"),
+        _listing(url_annonce="u2", annee=2016, prix_affiche=21000, ville="B"),
+        _listing(url_annonce="u3", annee=2024, prix_affiche=40000, ville="C"),  # trop récent
+    ]
+    res = engine.evaluer(listings, type_unite="Roulotte", modele="2205S",
+                         annee=2015, fenetre_annees=2)
+    annees = [c.annee for c in res["comparables"]]
+    assert 2024 not in annees
+    assert set(annees) == {2015, 2016}
+
+
+def test_fenetre_annees_configurable():
+    listings = [
+        _listing(url_annonce="u1", annee=2015, ville="A"),
+        _listing(url_annonce="u2", annee=2020, ville="B"),
+    ]
+    # fenêtre ±1 → seul 2015 ; fenêtre ±6 → les deux
+    r1 = engine.evaluer(listings, type_unite="Roulotte", modele="2205S", annee=2015, fenetre_annees=1)
+    assert {c.annee for c in r1["comparables"]} == {2015}
+    r6 = engine.evaluer(listings, type_unite="Roulotte", modele="2205S", annee=2015, fenetre_annees=6)
+    assert {c.annee for c in r6["comparables"]} == {2015, 2020}
+
+
+# --------------------------------------------------------------------------- #
+# Équivalents d'autres marques (gabarit similaire par longueur)
+# --------------------------------------------------------------------------- #
+
+def test_longueur_deduite_du_modele():
+    # Aucune longueur saisie : elle est déduite des annonces du même modèle (22 pi)
+    listings = [
+        _listing(url_annonce="u1", modele="2205S", longueur_pi=22.0, ville="A"),
+        _listing(url_annonce="u2", modele="2205S", longueur_pi=22.0, ville="B"),
+    ]
+    lg = engine.longueur_cible(listings, type_unite="Roulotte", modele="2205S")
+    assert lg == 22.0
+
+
+def test_equivalents_autres_marques_par_gabarit():
+    listings = [
+        # modèle exact demandé (Forest River), 22 pi
+        _listing(url_annonce="u1", marque="Forest River", modele="2205S",
+                 longueur_pi=22.0, prix_affiche=32000, annee=2021, ville="A"),
+        # autre marque, autre modèle, MÊME gabarit (~22 pi) → doit être inclus
+        _listing(url_annonce="u2", marque="Jayco", ligne="Jay Feather", modele="22RB",
+                 longueur_pi=22.5, prix_affiche=31000, annee=2021, ville="B"),
+        # autre marque mais gabarit très différent (30 pi) → exclu
+        _listing(url_annonce="u3", marque="Grand Design", ligne="Imagine", modele="3100RD",
+                 longueur_pi=30.0, prix_affiche=45000, annee=2021, ville="C"),
+    ]
+    res = engine.evaluer(listings, type_unite="Roulotte", modele="2205S",
+                         ligne="Rockwood Mini Lite", annee=2021, tolerance_longueur=2.0)
+    urls = {c.url_annonce for c in res["comparables"]}
+    assert "u1" in urls          # modèle exact
+    assert "u2" in urls          # équivalent d'une autre marque
+    assert "u3" not in urls      # gabarit trop différent
