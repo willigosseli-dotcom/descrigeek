@@ -38,38 +38,24 @@ img { max-width: 100%; }
 /* ===== PAGE D'ACCUEIL ===== */
 .home-body { overflow: hidden; height: 100vh; position: relative; }
 
-.sunset-scene {
+/* Fond premium bleu nuit + halos de marque + grille tech discrète */
+.hero-bg {
   position: fixed; inset: 0; z-index: 0;
-  background: linear-gradient(
-    175deg,
-    #0a1628 0%,
-    #1a2a5e 18%,
-    #3d2470 32%,
-    #7b2d8b 44%,
-    #c0392b 56%,
-    #e8632c 67%,
-    #f4a024 78%,
-    #ffd23f 90%,
-    #fff5c0 100%
-  );
+  background:
+    radial-gradient(1100px 680px at 80% -10%, rgba(42, 168, 234, 0.32) 0%, transparent 62%),
+    radial-gradient(820px 560px at 6% 114%, rgba(255, 180, 60, 0.14) 0%, transparent 60%),
+    radial-gradient(700px 500px at 50% 120%, rgba(232, 99, 44, 0.10) 0%, transparent 60%),
+    linear-gradient(160deg, #0a1226 0%, #0f2044 48%, #16305f 100%);
 }
-
-.sky-gradient {
+.hero-bg::after {
+  content: "";
   position: absolute; inset: 0;
-  background: radial-gradient(ellipse 60% 40% at 50% 62%, rgba(255,210,63,0.55) 0%, transparent 70%);
-}
-
-.sun-glow {
-  position: absolute;
-  width: 160px; height: 160px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,230,100,0.95) 0%, rgba(255,200,50,0.6) 40%, transparent 70%);
-  bottom: 22%; left: 50%; transform: translateX(-50%);
-  box-shadow: 0 0 80px 40px rgba(255,210,60,0.35);
-}
-
-.mountains-svg {
-  position: absolute; bottom: 0; left: 0; width: 100%; height: 55%;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse 82% 72% at 50% 42%, #000 28%, transparent 84%);
+  mask-image: radial-gradient(ellipse 82% 72% at 50% 42%, #000 28%, transparent 84%);
 }
 
 /* Filigrane logo concessionnaire */
