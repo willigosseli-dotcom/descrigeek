@@ -94,12 +94,16 @@ img { max-width: 100%; }
   border: 1px solid rgba(255,255,255,0.6);
 }
 
-/* Logo DescriGeek principal */
+/* Logo original Les Geeks du VR (format paysage), présenté en tuile blanche */
 .home-descrigeek-logo {
   display: block !important;
-  width: 160px !important; height: 160px !important;
-  max-width: 160px !important; max-height: 160px !important;
-  object-fit: contain; margin: 0 auto 8px;
+  width: auto !important; height: auto !important;
+  max-width: 260px !important; max-height: 138px !important;
+  object-fit: contain; margin: 4px auto 16px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 10px 16px;
+  box-shadow: 0 6px 18px rgba(15, 32, 68, 0.12);
 }
 
 .home-subtitle {
