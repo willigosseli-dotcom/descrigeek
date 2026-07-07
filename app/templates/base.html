@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}DescriGeek{% endblock %} — DescriGeek</title>
-  <link rel="stylesheet" href="/static/css/main.css?v=4" />
+  <title>{% block title %}Les Geeks du VR{% endblock %} — Les Geeks du VR</title>
+  <link rel="stylesheet" href="/static/css/main.css?v=5" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   {% if user %}
   <style>
@@ -37,7 +37,7 @@
       <i class="fa fa-bars"></i>
     </button>
     <a href="/dashboard" class="header-logo-link">
-      <img src="/static/logos/descrigeek.png" alt="DescriGeek" class="header-logo" style="max-height:44px;filter:none;opacity:1;">
+      <img src="/static/logos/lesgeeksduvr-ondark.svg" alt="Les Geeks du VR" class="header-logo" style="max-height:32px;filter:none;opacity:1;">
     </a>
   </div>
   <div class="header-right">
@@ -116,7 +116,7 @@
       {% endif %}
     </ul>
     <div class="sidebar-footer">
-      <p style="color:rgba(255,255,255,0.35);font-size:0.65rem;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.08em;">En collaboration avec</p>
+      <p style="color:rgba(255,255,255,0.35);font-size:0.65rem;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">Outil pour concessions de VR</p>
       <img src="/static/logos/geeks-du-vr.png" alt="Les Geeks du VR" class="sidebar-partner-logo">
     </div>
   </nav>
@@ -125,7 +125,7 @@
   <main class="main-content">
     <!-- Filigrane logo -->
     <div class="app-watermark" aria-hidden="true">
-      <img src="/static/logos/descrigeek.png" alt="">
+      <img src="/static/logos/geeks-du-vr.png" alt="">
     </div>
     {% block content %}{% endblock %}
   </main>

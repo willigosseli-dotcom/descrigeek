@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="DescriGeek", lifespan=lifespan)
+app = FastAPI(title="Les Geeks du VR", lifespan=lifespan)
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
 app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, max_age=86400)

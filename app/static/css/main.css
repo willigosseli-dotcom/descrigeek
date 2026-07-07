@@ -838,3 +838,54 @@ tr:hover td { background: var(--bg); }
   90%       { transform: translateX(4px); }
 }
 .dg-shake { animation: dg-shake 0.55s ease; }
+
+/* ===================================================================== */
+/* RAFRAÎCHISSEMENT — image de marque « Les Geeks du VR »                 */
+/* ===================================================================== */
+:root {
+  --brand-navy: #0f2044;
+  --brand-blue: #1B9DE0;
+  --brand-yellow: #FFD23F;
+  --brand-orange: #E8632C;
+}
+
+/* Boutons principaux : léger dégradé + relief au survol */
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  box-shadow: 0 3px 10px rgba(27, 157, 224, 0.28);
+}
+.btn-primary:hover {
+  background: linear-gradient(135deg, #2aa8ea 0%, var(--accent) 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 16px rgba(27, 157, 224, 0.36);
+}
+.btn-primary:active { transform: translateY(0) scale(0.99); }
+
+/* Cartes : ombre plus douce, coins plus arrondis */
+.card {
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(15, 32, 68, 0.04), 0 6px 22px rgba(15, 32, 68, 0.06);
+}
+
+/* Élément de navigation actif : petit liseré jaune de marque */
+.nav-item.active {
+  box-shadow: inset 3px 0 0 var(--brand-yellow);
+}
+
+/* En-tête : fin liseré de marque en bas */
+.app-header {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25), inset 0 -3px 0 rgba(255, 210, 63, 0.5);
+}
+
+/* Carte de connexion : barre d'accent de marque en haut */
+.login-card {
+  border-radius: 22px;
+  position: relative;
+  overflow: hidden;
+}
+.login-card::before {
+  content: "";
+  position: absolute; top: 0; left: 0; right: 0; height: 5px;
+  background: linear-gradient(90deg, var(--brand-blue) 0%, var(--brand-yellow) 62%, var(--brand-orange) 100%);
+}
+.login-logo { margin-top: 8px; }
