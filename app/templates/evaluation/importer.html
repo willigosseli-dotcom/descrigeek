@@ -66,13 +66,16 @@
       <div style="font-weight:700; font-size:1.05rem;">Glissez votre fichier CSV ici</div>
       <div class="text-muted text-sm" style="margin-top:4px;">ou cliquez pour choisir un fichier (.csv, UTF-8, 19 colonnes)</div>
       <div class="filename" id="filename"></div>
-      <input type="file" name="fichier" id="fichier" accept=".csv,text/csv" required style="display:none;" />
+      <input type="file" name="fichier" id="fichier" accept=".csv,text/csv" style="display:none;" />
     </label>
-    <div style="margin-top:16px; display:flex; gap:12px; align-items:center;">
+    <div style="margin-top:16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
       <button type="submit" class="btn-primary btn-lg" id="import-btn">
         <i class="fa fa-file-import"></i> Importer
       </button>
       <span class="text-muted text-sm">Base actuelle : <strong>{{ nb_total }}</strong> annonce(s).</span>
+      <span id="import-msg" style="display:none; color:#d21f26; font-weight:600; font-size:.9rem;">
+        <i class="fa fa-triangle-exclamation"></i> Choisis d'abord un fichier CSV (clique la zone ou glisse-le dedans).
+      </span>
     </div>
   </form>
 </div>
@@ -105,10 +108,25 @@
 const dz = document.getElementById('dropzone');
 const input = document.getElementById('fichier');
 const fname = document.getElementById('filename');
+const form = document.getElementById('import-form');
+const msg = document.getElementById('import-msg');
 
+function lancerImport() {
+  const btn = document.getElementById('import-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Import en cours...';
+  form.submit();
+}
+
+// Quand un fichier est choisi (via clic) ou déposé : afficher le nom et importer directement.
 input.addEventListener('change', () => {
-  fname.textContent = input.files.length ? input.files[0].name : '';
+  if (input.files.length) {
+    msg.style.display = 'none';
+    fname.textContent = input.files[0].name;
+    lancerImport();
+  }
 });
+
 ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => {
   e.preventDefault(); dz.classList.add('dragover');
 }));
@@ -118,10 +136,21 @@ input.addEventListener('change', () => {
 dz.addEventListener('drop', e => {
   if (e.dataTransfer.files.length) {
     input.files = e.dataTransfer.files;
+    msg.style.display = 'none';
     fname.textContent = input.files[0].name;
+    lancerImport();
   }
 });
-document.getElementById('import-form').addEventListener('submit', () => {
+
+// Bouton Importer : garde-fou visible si aucun fichier (au lieu d'un blocage silencieux).
+form.addEventListener('submit', (e) => {
+  if (!input.files.length) {
+    e.preventDefault();
+    msg.style.display = 'inline';
+    dz.classList.add('dragover');
+    setTimeout(() => dz.classList.remove('dragover'), 1200);
+    return;
+  }
   const btn = document.getElementById('import-btn');
   btn.disabled = true;
   btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Import en cours...';
