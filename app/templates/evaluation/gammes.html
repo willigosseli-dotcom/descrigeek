@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Gammes de qualité{% endblock %}
+
+{% block head %}
+<style>
+  .gamme-pill { font-size:.72rem; font-weight:700; padding:3px 10px; border-radius:20px; white-space:nowrap; }
+  .gamme-entree { background:#eef2f7; color:#475569; border:1px solid #cbd5e1; }
+  .gamme-milieu { background:#e8f5fd; color:#1470b0; border:1px solid #9fd7f5; }
+  .gamme-haut   { background:#fff6e0; color:#a06a00; border:1px solid #f4cf7a; }
+  .gamme-nc     { background:#fbeaea; color:#b04141; border:1px solid #f2c4c4; }
+  .src-badge { font-size:.65rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.04em; }
+  table.gammes-t td { vertical-align:middle; }
+  table.gammes-t input.form-control, table.gammes-t select.form-control { padding:6px 8px; font-size:.85rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><i class="fa fa-layer-group" style="color:var(--accent);"></i> Gammes de qualité</h1>
+  <p class="page-subtitle">Gamme de fabrication par marque + ligne — utilisée pour ne comparer qu'entre gammes équivalentes</p>
+</div>
+
+{% if message %}
+<div class="card" style="border-left:4px solid #2e9e4f;">
+  <p style="margin:0;"><i class="fa fa-circle-check" style="color:#2e9e4f;"></i> {{ message }}</p>
+</div>
+{% endif %}
+
+{% if demo %}
+<div class="card" style="border-left:4px solid var(--yellow);">
+  <p style="margin:0;"><i class="fa fa-triangle-exclamation" style="color:var(--yellow);"></i>
+    <strong>Mode démo</strong> — la classification automatique utilise une heuristique approximative
+    (pas d'IA). En production, configurez <code>ANTHROPIC_API_KEY</code> et <code>DEMO_MODE=false</code>
+    pour une classification par IA. Vous pouvez de toute façon corriger chaque ligne à la main.</p>
+</div>
+{% endif %}
+
+<div class="card">
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+    <div class="text-muted text-sm">
+      <strong>{{ nb_classees }}</strong> / {{ nb_total }} ligne(s) classée(s).
+    </div>
+    <form method="post" action="/evaluer/gammes/classer" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').innerHTML='<i class=\'fa fa-spinner fa-spin\'></i> Classification...';">
+      <button type="submit" class="btn-primary">
+        <i class="fa fa-wand-magic-sparkles"></i> Classer automatiquement les gammes manquantes
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  {% if not rows %}
+  <p class="text-muted">Aucune donnée. Importez d'abord des annonces (écran « Importer données »).</p>
+  {% else %}
+  <div class="table-wrap">
+    <table class="gammes-t">
+      <thead>
+        <tr>
+          <th>Marque / Ligne</th><th>Gamme</th><th>Murs</th><th>Substrat</th>
+          <th>Plancher</th><th>Source</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        {% set g = r.gamme %}
+        {% set fid = "gf" ~ loop.index %}
+        <tr>
+          <td>
+            <strong>{{ r.info.marque or '—' }}</strong><br>
+            <span class="text-muted">{{ r.info.ligne or '(ligne non précisée)' }}</span>
+            {% if g and g.justification %}<br><span class="text-muted" style="font-size:.72rem;">{{ g.justification }}</span>{% endif %}
+          </td>
+          <td>
+            <select class="form-control" name="gamme" form="{{ fid }}" style="min-width:110px;">
+              <option value="" {% if not g or not g.gamme %}selected{% endif %}>— non classé —</option>
+              {% for opt in gammes %}
+              <option value="{{ opt }}" {% if g and g.gamme == opt %}selected{% endif %}>{{ opt }}</option>
+              {% endfor %}
+            </select>
+          </td>
+          <td><input class="form-control" name="murs" form="{{ fid }}" value="{{ g.murs if g and g.murs else '' }}" placeholder="ex : fibre" style="min-width:110px;" /></td>
+          <td><input class="form-control" name="substrat" form="{{ fid }}" value="{{ g.substrat if g and g.substrat else '' }}" placeholder="ex : Azdel" style="min-width:110px;" /></td>
+          <td><input class="form-control" name="plancher" form="{{ fid }}" value="{{ g.plancher if g and g.plancher else '' }}" placeholder="ex : contreplaqué" style="min-width:120px;" /></td>
+          <td>{% if g %}<span class="src-badge">{{ g.source }}</span>{% else %}<span class="src-badge">—</span>{% endif %}</td>
+          <td><button type="submit" form="{{ fid }}" class="btn-secondary" style="padding:6px 10px; font-size:.8rem;"><i class="fa fa-floppy-disk"></i></button></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <!-- Formulaires (hors tableau pour un HTML valide ; les champs y sont liés via form=) -->
+  {% for r in rows %}
+  <form id="gf{{ loop.index }}" method="post" action="/evaluer/gammes/save" style="display:none;">
+    <input type="hidden" name="type_unite" value="{{ r.info.type_unite or '' }}" />
+    <input type="hidden" name="marque" value="{{ r.info.marque or '' }}" />
+    <input type="hidden" name="ligne" value="{{ r.info.ligne or '' }}" />
+  </form>
+  {% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

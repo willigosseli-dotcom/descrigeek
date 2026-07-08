@@ -60,6 +60,8 @@ def raison_exclusion_mediane(listing, inclure_bricoleur: bool = False) -> Option
         return totale
     if _get(listing, "is_estimation_utilisateur"):
         return "Estimation utilisateur"
+    if _get(listing, "is_gamme_differente"):
+        return "Gamme différente"
     if _get(listing, "is_usd"):
         return "Prix en USD"
     if _get(listing, "is_prix_sur_demande") or _get(listing, "prix_affiche") is None:

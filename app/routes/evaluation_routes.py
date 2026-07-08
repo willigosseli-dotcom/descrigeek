@@ -9,10 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.auth import require_login, require_admin
-from app.models import Listing, ImportBatch, UserEstimation
+from app.models import Listing, ImportBatch, UserEstimation, GammeModele
 from app.services import comparables_engine as engine
 from app.services import csv_import
 from app.services import eval_settings
+from app.services import gamme_classifier
 from app.templates_env import templates
 
 router = APIRouter()
@@ -78,6 +79,22 @@ async def _run_evaluation(request, user, db, type_unite, marque, ligne, modele, 
     )
     estimations = [_estimation_en_comparable(e) for e in est_result.scalars().all()]
 
+    # Gammes de qualité : celle de la cible + celle de chaque annonce
+    gammes_map = await gamme_classifier.charger_map(db)
+
+    def _gamme_de(marque_v, ligne_v):
+        g = gammes_map.get(gamme_classifier.cle(marque_v, ligne_v))
+        return g.gamme if g else None
+
+    gamme_cible = _gamme_de(marque, ligne)
+    for l in listings:
+        l.gamme = _gamme_de(l.marque, l.ligne)
+        l.is_gamme_differente = bool(l.gamme and gamme_cible and l.gamme != gamme_cible)
+    for e in estimations:
+        # Une estimation porte sur le véhicule évalué -> même gamme que la cible
+        e.gamme = gamme_cible
+        e.is_gamme_differente = False
+
     resultat = engine.evaluer(
         listings + estimations,
         type_unite=type_unite,
@@ -101,6 +118,7 @@ async def _run_evaluation(request, user, db, type_unite, marque, ligne, modele, 
             "niveau": engine.LIBELLE_NIVEAU.get(niveau, "—"),
             "exclusion": engine.raison_exclusion_mediane(c, settings.inclure_projets_bricoleur),
             "est_estimation": getattr(c, "is_estimation_utilisateur", False),
+            "gamme": getattr(c, "gamme", None),
         })
 
     return templates.TemplateResponse("evaluation/evaluer.html", {
@@ -111,6 +129,7 @@ async def _run_evaluation(request, user, db, type_unite, marque, ligne, modele, 
         "resultat": resultat,
         "comparables": comparables_affichage,
         "longueur_cible": resultat.get("longueur_cible"),
+        "gamme_cible": gamme_cible,
         "message_estimation": message_estimation,
     })
 
@@ -270,3 +289,65 @@ async def do_reglages(
         "request": request, "user": user, "settings": settings,
         "enregistre": True,
     })
+
+
+# --------------------------------------------------------------------------- #
+# Gammes de qualité (admin)
+# --------------------------------------------------------------------------- #
+
+async def _page_gammes(request, user, db, message=None):
+    lignes = await gamme_classifier.lignes_distinctes(db)
+    gammes_map = await gamme_classifier.charger_map(db)
+    rows = []
+    for d in lignes:
+        g = gammes_map.get(gamme_classifier.cle(d["marque"], d["ligne"]))
+        rows.append({"info": d, "gamme": g})
+    nb_classees = sum(1 for r in rows if r["gamme"] and r["gamme"].gamme)
+    return templates.TemplateResponse("evaluation/gammes.html", {
+        "request": request, "user": user,
+        "rows": rows, "gammes": gamme_classifier.GAMMES,
+        "nb_total": len(rows), "nb_classees": nb_classees,
+        "message": message, "demo": gamme_classifier.DEMO_MODE,
+    })
+
+
+@router.get("/evaluer/gammes", response_class=HTMLResponse)
+async def page_gammes(request: Request, user=Depends(require_admin),
+                      db: AsyncSession = Depends(get_db)):
+    return await _page_gammes(request, user, db)
+
+
+@router.post("/evaluer/gammes/classer", response_class=HTMLResponse)
+async def classer_gammes(request: Request, user=Depends(require_admin),
+                         db: AsyncSession = Depends(get_db)):
+    try:
+        res = await gamme_classifier.classer_manquantes(db)
+        message = f"{res['classees']} ligne(s) classée(s) automatiquement."
+    except Exception as e:  # robustesse : ne jamais planter la page
+        message = f"Erreur pendant la classification : {e}"
+    return await _page_gammes(request, user, db, message=message)
+
+
+@router.post("/evaluer/gammes/save", response_class=HTMLResponse)
+async def save_gamme(
+    request: Request,
+    type_unite: str = Form(""),
+    marque: str = Form(...),
+    ligne: str = Form(""),
+    gamme: str = Form(""),
+    murs: str = Form(""),
+    substrat: str = Form(""),
+    plancher: str = Form(""),
+    user=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    data = {
+        "gamme": gamme.strip() or None,
+        "murs": murs.strip() or None,
+        "substrat": substrat.strip() or None,
+        "plancher": plancher.strip() or None,
+        "justification": "Classée à la main.",
+    }
+    await gamme_classifier.upsert(db, type_unite or None, marque, ligne or None,
+                                  data, is_manuel=True)
+    return await _page_gammes(request, user, db, message="Gamme enregistrée.")

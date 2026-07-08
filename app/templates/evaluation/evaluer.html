@@ -27,6 +27,10 @@
   .badge-niveau { font-size:.7rem; padding:2px 8px; border-radius:20px; background:var(--bg); border:1px solid var(--border); white-space:nowrap; }
   .badge-exclu { font-size:.7rem; padding:2px 8px; border-radius:20px; background:#fff3cd; color:#8a6d00; border:1px solid #ffe08a; white-space:nowrap; }
   .badge-user { font-size:.7rem; padding:2px 8px; border-radius:20px; background:#ede9fe; color:#6d28d9; border:1px solid #c4b5fd; white-space:nowrap; font-weight:600; }
+  .badge-gamme { font-size:.68rem; font-weight:700; padding:2px 8px; border-radius:20px; white-space:nowrap; }
+  .badge-gamme.entree { background:#eef2f7; color:#475569; border:1px solid #cbd5e1; }
+  .badge-gamme.milieu { background:#e8f5fd; color:#1470b0; border:1px solid #9fd7f5; }
+  .badge-gamme.haut   { background:#fff6e0; color:#a06a00; border:1px solid #f4cf7a; }
 </style>
 {% endblock %}
 
@@ -105,7 +109,10 @@
 
 {% if resultat.stats.n > 0 %}
 <div class="card">
-  <div class="card-title"><i class="fa fa-chart-line"></i> Analyse de marché du modèle</div>
+  <div class="card-title" style="justify-content:space-between;">
+    <span><i class="fa fa-chart-line"></i> Analyse de marché du modèle</span>
+    {% if gamme_cible %}<span class="badge-gamme {{ gamme_cible|replace('é','e') }}">Gamme : {{ gamme_cible }}</span>{% endif %}
+  </div>
   <p style="font-size:1.05rem; font-weight:600; margin-bottom:8px;">{{ resultat.phrase }}</p>
   <div class="stat-grid">
     <div class="stat-box"><div class="val">{{ "{:,}".format(resultat.stats.mediane).replace(",", " ") }} $</div><div class="lbl">Prix médian</div></div>
@@ -156,7 +163,10 @@
               </span>
             {% else %}{{ c.l.ville or '—' }}{% endif %}
           </td>
-          <td><span class="badge-niveau">{{ c.niveau }}</span></td>
+          <td>
+            <span class="badge-niveau">{{ c.niveau }}</span>
+            {% if c.gamme %}<br><span class="badge-gamme {{ c.gamme|replace('é','e') }}" style="margin-top:4px; display:inline-block;">{{ c.gamme }}</span>{% endif %}
+          </td>
           <td>
             {% if c.l.url_annonce %}
             <a href="{{ c.l.url_annonce }}" target="_blank" rel="noopener" class="btn-secondary" style="padding:5px 10px; font-size:.8rem;">

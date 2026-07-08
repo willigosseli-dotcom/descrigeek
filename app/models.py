@@ -182,6 +182,31 @@ class UserEstimation(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class GammeModele(Base):
+    """Gamme de qualité de fabrication d'un modèle (au niveau marque + ligne).
+
+    Classée automatiquement (IA/web) puis corrigeable à la main. Sert à ne comparer
+    qu'entre gammes équivalentes (une roulotte fibre/Azdel n'est pas comparée à une
+    entrée de gamme OSB/aluminium).
+    """
+    __tablename__ = "gammes_modeles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    type_unite = Column(String(50), nullable=True)
+    marque = Column(String(120), nullable=False, index=True)
+    ligne = Column(String(160), nullable=True, index=True)
+
+    gamme = Column(String(20), nullable=True)   # "entrée", "milieu", "haut"
+    murs = Column(String(120), nullable=True)       # ex. "fibre de verre", "aluminium"
+    substrat = Column(String(120), nullable=True)   # ex. "Azdel", "bois / Luan"
+    plancher = Column(String(120), nullable=True)   # ex. "contreplaqué", "OSB"
+    justification = Column(Text, nullable=True)
+
+    source = Column(String(20), default="IA")   # "IA", "démo", "manuel"
+    is_manuel = Column(Boolean, default=False)  # override manuel -> ne pas réécraser
+    cached_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class EvalSetting(Base):
     """Réglages du moteur d'évaluation (une seule ligne, id=1)."""
     __tablename__ = "eval_settings"

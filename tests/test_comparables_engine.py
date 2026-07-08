@@ -222,6 +222,25 @@ def test_estimation_utilisateur_jamais_ecartee_comme_aberrante():
 
 
 # --------------------------------------------------------------------------- #
+# Gamme de qualité : autre gamme -> visible mais hors médiane
+# --------------------------------------------------------------------------- #
+
+def test_gamme_differente_visible_hors_mediane():
+    cible = _listing(url_annonce="u1", modele="2205S", ligne="Rockwood Mini Lite",
+                     longueur_pi=22.0, prix_affiche=32000, ville="A")
+    autre = _listing(url_annonce="u2", marque="Autre", modele="9999", ligne="Autre",
+                     longueur_pi=22.0, prix_affiche=25000, ville="B",
+                     is_gamme_differente=True)
+    res = engine.evaluer([cible, autre], type_unite="Roulotte", modele="2205S",
+                         ligne="Rockwood Mini Lite", annee=2021)
+    urls = {c.url_annonce for c in res["comparables"]}
+    assert "u2" in urls                                   # reste visible
+    assert engine.raison_exclusion_mediane(autre) == "Gamme différente"
+    assert res["stats"].n == 1                            # seule la cible compte
+    assert res["stats"].mediane == 32000
+
+
+# --------------------------------------------------------------------------- #
 # Restriction par année (filtre STRICT)
 # --------------------------------------------------------------------------- #
 
