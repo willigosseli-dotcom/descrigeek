@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Les Geeks du VR{% endblock %} — Les Geeks du VR</title>
-  <link rel="stylesheet" href="/static/css/main.css?v=8" />
+  <link rel="stylesheet" href="/static/css/main.css?v=9" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   {% if user %}
   <style>
@@ -68,6 +68,7 @@
           <i class="fa fa-house"></i><span>Tableau de bord</span>
         </a>
       </li>
+      <li class="nav-section-title nav-section-desc">Génération de descriptions</li>
       <li>
         <a href="/generate" class="nav-item {% if '/generate' in request.url.path %}active{% endif %}">
           <i class="fa fa-wand-magic-sparkles"></i><span>Générer</span>
@@ -78,7 +79,7 @@
           <i class="fa fa-clock-rotate-left"></i><span>Historique</span>
         </a>
       </li>
-      <li class="nav-section-title">Évaluation de prix</li>
+      <li class="nav-section-title nav-section-eval">Évaluation de véhicule</li>
       <li>
         <a href="/evaluer" class="nav-item {% if request.url.path == '/evaluer' %}active{% endif %}">
           <i class="fa fa-tags"></i><span>Évaluer un véhicule</span>

@@ -151,6 +151,34 @@ def test_filtre_par_type_unite():
 
 
 # --------------------------------------------------------------------------- #
+# Estimations utilisateur : visibles mais hors médiane, jamais dédoublonnées
+# --------------------------------------------------------------------------- #
+
+def test_estimation_utilisateur_visible_hors_mediane():
+    listings = [
+        _listing(url_annonce="u1", prix_affiche=30000, ville="A"),
+        _listing(url_annonce="u2", prix_affiche=32000, ville="B"),
+    ]
+    est = _listing(url_annonce=None, prix_affiche=50000, ville=None,
+                   type_vendeur="Utilisateur", is_estimation_utilisateur=True)
+    res = engine.evaluer(listings + [est], type_unite="Roulotte", modele="2205S", annee=2021)
+
+    # exclue de la médiane
+    assert engine.raison_exclusion_mediane(est) == "Estimation utilisateur"
+    assert res["stats"].n == 2
+    assert res["stats"].mediane == 31000
+    assert res["stats"].maximum == 32000  # le 50000 de l'estimation n'entre pas
+    # mais bien présente dans les comparables affichés
+    assert any(getattr(c, "is_estimation_utilisateur", False) for c in res["comparables"])
+
+
+def test_estimations_jamais_dedoublonnees():
+    e1 = _listing(url_annonce=None, prix_affiche=40000, ville=None, is_estimation_utilisateur=True)
+    e2 = _listing(url_annonce=None, prix_affiche=40000, ville=None, is_estimation_utilisateur=True)
+    assert len(engine.dedoublonner([e1, e2])) == 2
+
+
+# --------------------------------------------------------------------------- #
 # Restriction par année (filtre STRICT)
 # --------------------------------------------------------------------------- #
 

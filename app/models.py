@@ -155,6 +155,33 @@ class ImportBatch(Base):
     details = Column(JSON, nullable=True)         # ex. listes d'exemples de baisses
 
 
+class UserEstimation(Base):
+    """Estimation de valeur marchande saisie manuellement par un utilisateur.
+
+    Sert de comparable « Utilisateur » lors des évaluations futures (même modèle
+    ou modèle similaire). Trace qui l'a entrée, quand. N'entre PAS dans la médiane.
+    """
+    __tablename__ = "user_estimations"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    # Identité du véhicule évalué
+    type_unite = Column(String(50), nullable=True, index=True)
+    marque = Column(String(120), nullable=True)
+    ligne = Column(String(160), nullable=True)
+    modele = Column(String(160), nullable=True, index=True)
+    annee = Column(Integer, nullable=True, index=True)
+    longueur_pi = Column(Float, nullable=True)   # déduite au moment de l'évaluation
+
+    valeur_estimee = Column(Integer, nullable=False)   # estimation en CAD
+    note = Column(Text, nullable=True)
+
+    # Traçabilité
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    auteur = Column(String(120), nullable=True)   # nom affiché figé au moment de la saisie
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class EvalSetting(Base):
     """Réglages du moteur d'évaluation (une seule ligne, id=1)."""
     __tablename__ = "eval_settings"

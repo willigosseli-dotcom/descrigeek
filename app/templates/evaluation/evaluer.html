@@ -26,6 +26,7 @@
   .stat-box .lbl { font-size:.78rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; }
   .badge-niveau { font-size:.7rem; padding:2px 8px; border-radius:20px; background:var(--bg); border:1px solid var(--border); white-space:nowrap; }
   .badge-exclu { font-size:.7rem; padding:2px 8px; border-radius:20px; background:#fff3cd; color:#8a6d00; border:1px solid #ffe08a; white-space:nowrap; }
+  .badge-user { font-size:.7rem; padding:2px 8px; border-radius:20px; background:#ede9fe; color:#6d28d9; border:1px solid #c4b5fd; white-space:nowrap; font-weight:600; }
 </style>
 {% endblock %}
 
@@ -65,7 +66,7 @@
                value="{{ form.ligne if form else '' }}" />
       </div>
     </div>
-    <div class="form-row cols-3">
+    <div class="form-row cols-2">
       <div class="form-group mb-0">
         <label class="form-label">Modèle (plancher)</label>
         <input class="form-control" name="modele" placeholder="ex : 2205S"
@@ -76,17 +77,11 @@
         <input class="form-control" type="number" name="annee" min="1980" max="2035"
                placeholder="ex : 2021" value="{{ form.annee if form else '' }}" />
       </div>
-      <div class="form-group mb-0">
-        <label class="form-label">Longueur (pi) <span class="text-muted" style="font-weight:400;">— optionnel</span></label>
-        <input class="form-control" type="number" step="0.5" name="longueur_pi" min="0" max="60"
-               placeholder="ex : 22" value="{{ form.longueur_pi if form else '' }}" />
-      </div>
     </div>
     <p class="form-hint" style="margin-top:10px;">
       <i class="fa fa-circle-info" style="color:var(--accent);"></i>
-      L'analyse inclut des roulottes d'<strong>autres marques de gabarit équivalent</strong>
-      (même type et longueur proche). La longueur est déduite automatiquement de vos annonces
-      du même modèle si vous ne la saisissez pas.
+      L'analyse inclut aussi des VR d'<strong>autres marques de gabarit équivalent</strong>
+      (même type et longueur proche), déduits automatiquement de vos annonces.
     </p>
   </div>
 
@@ -97,6 +92,11 @@
 
 {% if resultat %}
 <!-- ======================= RÉSULTATS ======================= -->
+{% if message_estimation %}
+<div class="card" style="border-left:4px solid #2e9e4f;">
+  <p style="margin:0;"><i class="fa fa-circle-check" style="color:#2e9e4f;"></i> {{ message_estimation }}</p>
+</div>
+{% endif %}
 {% if resultat.message %}
 <div class="card" style="border-left:4px solid var(--accent);">
   <p style="margin:0;"><i class="fa fa-circle-info" style="color:var(--accent);"></i> {{ resultat.message }}</p>
@@ -134,7 +134,7 @@
       </thead>
       <tbody>
         {% for c in comparables %}
-        <tr {% if c.exclusion %}style="background:#fffdf5;"{% endif %}>
+        <tr {% if c.est_estimation %}style="background:#f5f1ff;"{% elif c.exclusion %}style="background:#fffdf5;"{% endif %}>
           <td>
             <strong>{{ c.l.marque or '' }} {{ c.l.ligne or '' }}</strong><br>
             <span class="text-muted">{{ c.l.modele or '' }}</span>
@@ -143,10 +143,19 @@
           <td>
             {% if c.l.prix_affiche %}<strong>{{ "{:,}".format(c.l.prix_affiche).replace(",", " ") }} $</strong>
             {% else %}<span class="text-muted">sur demande</span>{% endif %}
-            {% if c.exclusion %}<br><span class="badge-exclu">{{ c.exclusion }}</span>{% endif %}
+            {% if c.est_estimation %}<br><span class="badge-user"><i class="fa fa-user-pen"></i> Estimation utilisateur</span>
+            {% elif c.exclusion %}<br><span class="badge-exclu">{{ c.exclusion }}</span>{% endif %}
           </td>
-          <td>{{ c.l.type_vendeur or '—' }}</td>
-          <td>{{ c.l.ville or '—' }}</td>
+          <td>
+            {% if c.est_estimation %}Utilisateur{% else %}{{ c.l.type_vendeur or '—' }}{% endif %}
+          </td>
+          <td>
+            {% if c.est_estimation %}
+              <span class="text-muted" style="font-size:.82rem;">
+                {{ c.l.auteur or '—' }}{% if c.l.created_at %}<br>{{ c.l.created_at.strftime("%d %b %Y %H:%M") }}{% endif %}
+              </span>
+            {% else %}{{ c.l.ville or '—' }}{% endif %}
+          </td>
           <td><span class="badge-niveau">{{ c.niveau }}</span></td>
           <td>
             {% if c.l.url_annonce %}
@@ -160,6 +169,40 @@
       </tbody>
     </table>
   </div>
+</div>
+{% endif %}
+
+{% if form and (form.modele or form.ligne) %}
+<!-- Saisie d'une estimation utilisateur -->
+<div class="card" style="border-top:3px solid var(--accent);">
+  <div class="card-title"><i class="fa fa-user-pen"></i> Ajouter votre estimation de valeur marchande</div>
+  <p class="text-muted text-sm" style="margin-bottom:14px;">
+    Enregistrez votre estimation pour ce véhicule
+    (<strong>{{ form.marque }} {{ form.ligne }} {{ form.modele }}{% if form.annee %}, {{ form.annee }}{% endif %}</strong>).
+    Elle est conservée avec votre nom, la date et l'heure, puis proposée (badge
+    « Utilisateur ») lors des prochaines évaluations de ce modèle ou d'un modèle similaire.
+    Elle n'entre pas dans le calcul du prix médian.
+  </p>
+  <form method="post" action="/evaluer/estimation">
+    <input type="hidden" name="type_unite" value="{{ type_actif }}" />
+    <input type="hidden" name="marque" value="{{ form.marque }}" />
+    <input type="hidden" name="ligne" value="{{ form.ligne }}" />
+    <input type="hidden" name="modele" value="{{ form.modele }}" />
+    <input type="hidden" name="annee" value="{{ form.annee }}" />
+    <input type="hidden" name="longueur_cible" value="{{ longueur_cible if longueur_cible is not none else '' }}" />
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label class="form-label">Votre estimation (valeur marchande, $)</label>
+        <input class="form-control" type="text" name="valeur_estimee" inputmode="numeric"
+               placeholder="ex : 31 500" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note <span class="text-muted" style="font-weight:400;">— optionnel</span></label>
+        <input class="form-control" type="text" name="note" placeholder="ex : bon état, options ajoutées..." />
+      </div>
+    </div>
+    <button type="submit" class="btn-primary"><i class="fa fa-floppy-disk"></i> Enregistrer mon estimation</button>
+  </form>
 </div>
 {% endif %}
 {% endif %}

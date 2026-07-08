@@ -1,4 +1,7 @@
 """Routes d'évaluation de prix de VR usagés : Évaluer, Importer, Réglages."""
+from types import SimpleNamespace
+from datetime import datetime
+
 from fastapi import APIRouter, Request, Depends, Form, UploadFile, File
 from fastapi.responses import HTMLResponse
 from sqlalchemy import select
@@ -6,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.auth import require_login, require_admin
-from app.models import Listing, ImportBatch
+from app.models import Listing, ImportBatch, UserEstimation
 from app.services import comparables_engine as engine
 from app.services import csv_import
 from app.services import eval_settings
@@ -35,58 +38,58 @@ async def page_evaluer(request: Request, user=Depends(require_login)):
     })
 
 
-@router.post("/evaluer", response_class=HTMLResponse)
-async def do_evaluer(
-    request: Request,
-    type_unite: str = Form(...),
-    marque: str = Form(""),
-    ligne: str = Form(""),
-    modele: str = Form(""),
-    annee: str = Form(""),
-    longueur_pi: str = Form(""),
-    user=Depends(require_login),
-    db: AsyncSession = Depends(get_db),
-):
-    # Sécurité : ignorer un type inactif (VTT / Côte à côte) s'il est forcé
+def _estimation_en_comparable(e: UserEstimation) -> SimpleNamespace:
+    """Convertit une estimation utilisateur en objet « comparable » pour le moteur."""
+    return SimpleNamespace(
+        type_unite=e.type_unite, marque=e.marque, ligne=e.ligne, modele=e.modele,
+        annee=e.annee, prix_affiche=e.valeur_estimee, type_vendeur="Utilisateur",
+        ville=None, localisation=None, longueur_pi=e.longueur_pi, url_annonce=None,
+        is_usd=False, is_prix_sur_demande=False, is_volee=False,
+        is_projet_bricoleur=False, is_doublon=False, is_notre_annonce=False,
+        is_estimation_utilisateur=True,
+        auteur=e.auteur, created_at=e.created_at, note=e.note,
+    )
+
+
+async def _run_evaluation(request, user, db, type_unite, marque, ligne, modele, annee,
+                          message_estimation=None):
+    """Exécute une évaluation et renvoie la page de résultats (partagée)."""
     if type_unite not in TYPES_ACTIFS:
         type_unite = TYPES_ONGLETS[0]["cle"]
 
     try:
-        annee_int = int(annee) if annee.strip() else None
+        annee_int = int(str(annee)) if str(annee).strip() else None
     except ValueError:
         annee_int = None
 
-    try:
-        longueur_val = float(longueur_pi.replace(",", ".")) if longueur_pi.strip() else None
-    except ValueError:
-        longueur_val = None
-
     settings = await eval_settings.get_settings(db)
 
-    # Charger les annonces actives du bon type d'unité
+    # Annonces réelles actives + estimations utilisateur (du même type d'unité)
     result = await db.execute(
         select(Listing).where(
             Listing.type_unite == type_unite,
             Listing.disparue == False,  # noqa: E712
         )
     )
-    listings = result.scalars().all()
+    listings = list(result.scalars().all())
+
+    est_result = await db.execute(
+        select(UserEstimation).where(UserEstimation.type_unite == type_unite)
+    )
+    estimations = [_estimation_en_comparable(e) for e in est_result.scalars().all()]
 
     resultat = engine.evaluer(
-        listings,
+        listings + estimations,
         type_unite=type_unite,
         marque=marque.strip() or None,
         ligne=ligne.strip() or None,
         modele=modele.strip() or None,
         annee=annee_int,
-        longueur_pi=longueur_val,
         fenetre_annees=settings.fenetre_annees,
         tolerance_longueur=settings.tolerance_longueur_pi,
         inclure_bricoleur=settings.inclure_projets_bricoleur,
     )
 
-    # Étiqueter chaque comparable : niveau de correspondance + raison d'exclusion éventuelle.
-    # On réutilise la longueur de référence (saisie ou déduite) pour bien détecter le gabarit.
     comparables_affichage = []
     for c in resultat["comparables"]:
         niveau = engine._niveau_correspondance(
@@ -97,17 +100,87 @@ async def do_evaluer(
             "l": c,
             "niveau": engine.LIBELLE_NIVEAU.get(niveau, "—"),
             "exclusion": engine.raison_exclusion_mediane(c, settings.inclure_projets_bricoleur),
+            "est_estimation": getattr(c, "is_estimation_utilisateur", False),
         })
 
     return templates.TemplateResponse("evaluation/evaluer.html", {
         "request": request, "user": user,
         "onglets": TYPES_ONGLETS,
         "type_actif": type_unite,
-        "form": {"marque": marque, "ligne": ligne, "modele": modele,
-                 "annee": annee, "longueur_pi": longueur_pi},
+        "form": {"marque": marque, "ligne": ligne, "modele": modele, "annee": annee},
         "resultat": resultat,
         "comparables": comparables_affichage,
+        "longueur_cible": resultat.get("longueur_cible"),
+        "message_estimation": message_estimation,
     })
+
+
+@router.post("/evaluer", response_class=HTMLResponse)
+async def do_evaluer(
+    request: Request,
+    type_unite: str = Form(...),
+    marque: str = Form(""),
+    ligne: str = Form(""),
+    modele: str = Form(""),
+    annee: str = Form(""),
+    user=Depends(require_login),
+    db: AsyncSession = Depends(get_db),
+):
+    return await _run_evaluation(request, user, db, type_unite, marque, ligne, modele, annee)
+
+
+@router.post("/evaluer/estimation", response_class=HTMLResponse)
+async def do_estimation(
+    request: Request,
+    type_unite: str = Form(...),
+    marque: str = Form(""),
+    ligne: str = Form(""),
+    modele: str = Form(""),
+    annee: str = Form(""),
+    valeur_estimee: str = Form(...),
+    longueur_cible: str = Form(""),
+    note: str = Form(""),
+    user=Depends(require_login),
+    db: AsyncSession = Depends(get_db),
+):
+    if type_unite not in TYPES_ACTIFS:
+        type_unite = TYPES_ONGLETS[0]["cle"]
+
+    # Nettoyer le montant saisi (retirer $, espaces, séparateurs)
+    digits = "".join(ch for ch in valeur_estimee if ch.isdigit())
+    valeur = int(digits) if digits else 0
+
+    message = None
+    if valeur > 0:
+        try:
+            annee_int = int(annee) if annee.strip() else None
+        except ValueError:
+            annee_int = None
+        try:
+            lg = float(longueur_cible) if longueur_cible.strip() else None
+        except ValueError:
+            lg = None
+        db.add(UserEstimation(
+            type_unite=type_unite,
+            marque=marque.strip() or None,
+            ligne=ligne.strip() or None,
+            modele=modele.strip() or None,
+            annee=annee_int,
+            longueur_pi=lg,
+            valeur_estimee=valeur,
+            note=note.strip() or None,
+            user_id=user.id,
+            auteur=(user.full_name or user.username),
+            created_at=datetime.utcnow(),
+        ))
+        await db.commit()
+        message = f"Estimation de {valeur:,} $".replace(",", " ") + \
+            " enregistrée et ajoutée aux propositions."
+    else:
+        message = "Montant invalide — l'estimation n'a pas été enregistrée."
+
+    return await _run_evaluation(request, user, db, type_unite, marque, ligne, modele, annee,
+                                 message_estimation=message)
 
 
 # --------------------------------------------------------------------------- #

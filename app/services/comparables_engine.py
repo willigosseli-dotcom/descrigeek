@@ -58,6 +58,8 @@ def raison_exclusion_mediane(listing, inclure_bricoleur: bool = False) -> Option
     totale = raison_exclusion_totale(listing)
     if totale:
         return totale
+    if _get(listing, "is_estimation_utilisateur"):
+        return "Estimation utilisateur"
     if _get(listing, "is_usd"):
         return "Prix en USD"
     if _get(listing, "is_prix_sur_demande") or _get(listing, "prix_affiche") is None:
@@ -84,6 +86,10 @@ def dedoublonner(listings: Iterable) -> list:
     vues: set = set()
     resultat: list = []
     for l in listings:
+        if _get(l, "is_estimation_utilisateur"):
+            # Estimations utilisateur : toujours conservées (jamais dédoublonnées)
+            resultat.append(l)
+            continue
         if _get(l, "is_doublon"):
             # Signalé explicitement comme doublon : on ne le garde que si sa clé
             # n'a pas déjà été vue.
