@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.auth import require_login, require_admin
-from app.models import Listing, ImportBatch, UserEstimation, GammeModele
+from app.models import Listing, ImportBatch, UserEstimation, GammeModele, EvaluationLog
 from app.services import comparables_engine as engine
 from app.services import csv_import
 from app.services import eval_settings
@@ -53,7 +53,7 @@ def _estimation_en_comparable(e: UserEstimation) -> SimpleNamespace:
 
 
 async def _run_evaluation(request, user, db, type_unite, marque, ligne, modele, annee,
-                          message_estimation=None):
+                          message_estimation=None, journaliser=False):
     """Exécute une évaluation et renvoie la page de résultats (partagée)."""
     if type_unite not in TYPES_ACTIFS:
         type_unite = TYPES_ONGLETS[0]["cle"]
@@ -121,6 +121,19 @@ async def _run_evaluation(request, user, db, type_unite, marque, ligne, modele, 
             "gamme": getattr(c, "gamme", None),
         })
 
+    # Journaliser l'évaluation (historique persistant), si demandé et véhicule renseigné
+    if journaliser and (modele.strip() or ligne.strip()):
+        db.add(EvaluationLog(
+            user_id=user.id, auteur=(user.full_name or user.username),
+            type_unite=type_unite, marque=marque.strip() or None,
+            ligne=ligne.strip() or None, modele=modele.strip() or None,
+            annee=annee_int, gamme=gamme_cible,
+            prix_median=resultat["stats"].mediane,
+            nb_comparables=resultat["stats"].n,
+            created_at=datetime.utcnow(),
+        ))
+        await db.commit()
+
     return templates.TemplateResponse("evaluation/evaluer.html", {
         "request": request, "user": user,
         "onglets": TYPES_ONGLETS,
@@ -145,7 +158,8 @@ async def do_evaluer(
     user=Depends(require_login),
     db: AsyncSession = Depends(get_db),
 ):
-    return await _run_evaluation(request, user, db, type_unite, marque, ligne, modele, annee)
+    return await _run_evaluation(request, user, db, type_unite, marque, ligne, modele, annee,
+                                 journaliser=True)
 
 
 @router.post("/evaluer/estimation", response_class=HTMLResponse)
@@ -351,3 +365,19 @@ async def save_gamme(
     await gamme_classifier.upsert(db, type_unite or None, marque, ligne or None,
                                   data, is_manuel=True)
     return await _page_gammes(request, user, db, message="Gamme enregistrée.")
+
+
+# --------------------------------------------------------------------------- #
+# Historique des évaluations (tous les utilisateurs connectés)
+# --------------------------------------------------------------------------- #
+
+@router.get("/evaluer/historique", response_class=HTMLResponse)
+async def historique_evaluations(request: Request, user=Depends(require_login),
+                                 db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(EvaluationLog).order_by(EvaluationLog.created_at.desc()).limit(200)
+    )
+    logs = result.scalars().all()
+    return templates.TemplateResponse("evaluation/historique.html", {
+        "request": request, "user": user, "logs": logs,
+    })

@@ -36,11 +36,21 @@
         <input class="form-control" type="password" id="password" name="password"
                placeholder="••••••••" autocomplete="current-password" required />
       </div>
+      <div class="form-group">
+        <label class="form-label" for="app_password">Mot de passe de l'application</label>
+        <input class="form-control" type="password" id="app_password" name="app_password"
+               placeholder="Mot de passe partagé" autocomplete="off" required />
+        <p class="form-hint">Mot de passe commun de l'application (fourni par votre gestionnaire).</p>
+      </div>
       <button type="submit" class="btn-primary btn-lg w-full" style="justify-content:center; margin-top:8px;">
         <i class="fa fa-right-to-bracket"></i>
         Se connecter
       </button>
     </form>
+
+    <p style="text-align:center; margin-top:18px; font-size:0.88rem;">
+      Pas encore de compte ? <a href="/register" style="font-weight:600;">Créer un compte</a>
+    </p>
 
     <div class="login-footer">
       <span>Concession</span>

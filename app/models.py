@@ -182,6 +182,39 @@ class UserEstimation(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class AppConfig(Base):
+    """Configuration globale de l'app (une seule ligne, id=1).
+
+    Contient le mot de passe général partagé (haché) exigé à la connexion et à
+    l'inscription, modifiable par un admin et changé « de temps en temps ».
+    """
+    __tablename__ = "app_config"
+
+    id = Column(Integer, primary_key=True)
+    general_password_hash = Column(String(255), nullable=True)
+    general_password_updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class EvaluationLog(Base):
+    """Journal des évaluations effectuées (historique persistant des unités évaluées)."""
+    __tablename__ = "evaluation_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    auteur = Column(String(120), nullable=True)
+
+    type_unite = Column(String(50), nullable=True)
+    marque = Column(String(120), nullable=True)
+    ligne = Column(String(160), nullable=True)
+    modele = Column(String(160), nullable=True)
+    annee = Column(Integer, nullable=True)
+    gamme = Column(String(20), nullable=True)
+
+    prix_median = Column(Integer, nullable=True)
+    nb_comparables = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
 class GammeModele(Base):
     """Gamme de qualité de fabrication d'un modèle (au niveau marque + ligne).
 

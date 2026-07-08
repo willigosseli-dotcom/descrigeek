@@ -5,6 +5,7 @@ from sqlalchemy import select
 from app.database import get_db
 from app.auth import require_admin, hash_password
 from app.models import User
+from app.services import app_config
 import json, os
 
 router = APIRouter(prefix="/admin")
@@ -18,7 +19,28 @@ TERMINOLOGY_PATH = "config/terminology.json"
 async def list_users(request: Request, admin=Depends(require_admin), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).order_by(User.created_at.desc()))
     users = result.scalars().all()
-    return templates.TemplateResponse("admin/users.html", {"request": request, "user": admin, "users": users})
+    cfg = await app_config.get_config(db)
+    message = request.session.pop("users_message", None)
+    return templates.TemplateResponse("admin/users.html", {
+        "request": request, "user": admin, "users": users,
+        "appconfig": cfg, "message": message,
+    })
+
+
+@router.post("/security/general-password")
+async def change_general_password(
+    request: Request,
+    new_general_password: str = Form(...),
+    admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    pw = new_general_password.strip()
+    if len(pw) < 3:
+        request.session["users_message"] = "Le mot de passe général doit faire au moins 3 caractères."
+    else:
+        await app_config.set_general_password(db, pw)
+        request.session["users_message"] = "Mot de passe général de l'application mis à jour."
+    return RedirectResponse("/admin/users", status_code=303)
 
 
 @router.post("/users/create")

@@ -12,6 +12,32 @@
   </button>
 </div>
 
+{% if message %}
+<div class="card" style="border-left:4px solid #2e9e4f;">
+  <p style="margin:0;"><i class="fa fa-circle-check" style="color:#2e9e4f;"></i> {{ message }}</p>
+</div>
+{% endif %}
+
+<!-- Sécurité : mot de passe général de l'application -->
+<div class="card">
+  <div class="card-title"><i class="fa fa-shield-halved"></i> Sécurité — mot de passe général de l'application</div>
+  <p class="text-muted text-sm" style="margin-bottom:14px;">
+    Mot de passe <strong>partagé</strong>, exigé à la connexion et à l'inscription (en plus du compte
+    personnel). Changez-le de temps en temps et communiquez le nouveau à votre équipe : ceux qui ne
+    l'ont pas ne pourront plus se connecter.
+    {% if appconfig and appconfig.general_password_updated_at %}
+    <br>Dernière modification : {{ appconfig.general_password_updated_at.strftime('%d %b %Y %H:%M') }}.
+    {% endif %}
+  </p>
+  <form method="post" action="/admin/security/general-password" style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+    <div class="form-group mb-0" style="flex:1; min-width:220px;">
+      <label class="form-label">Nouveau mot de passe général</label>
+      <input class="form-control" type="text" name="new_general_password" required placeholder="ex : 1984" />
+    </div>
+    <button type="submit" class="btn-primary"><i class="fa fa-floppy-disk"></i> Mettre à jour</button>
+  </form>
+</div>
+
 <div class="card">
   <div class="table-wrap">
     <table>
