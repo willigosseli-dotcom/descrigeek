@@ -330,6 +330,50 @@ def phrase_lecture(stats: StatsMarche) -> str:
     )
 
 
+# --------------------------------------------------------------------------- #
+# Filtre des prix aberrants (annonces « complètement dans le champ »)
+# --------------------------------------------------------------------------- #
+
+# Une annonce est aberrante si son prix est hors de [MIN%, MAX%] du prix médian.
+ABERRANT_MIN_PCT = 50    # ex. médiane 20 000 $ -> on écarte sous 10 000 $
+ABERRANT_MAX_PCT = 200   # ... et au-dessus de 40 000 $
+ABERRANT_MIN_N = 4       # nombre minimal d'annonces pour pouvoir juger
+
+
+def filtrer_aberrants(listings, *, min_pct: int = ABERRANT_MIN_PCT,
+                      max_pct: int = ABERRANT_MAX_PCT, min_n: int = ABERRANT_MIN_N,
+                      inclure_bricoleur: bool = False) -> list:
+    """Retire les annonces au prix aberrant par rapport au médian de l'échantillon.
+
+    Le médian de référence est calculé sur les prix médiane-éligibles (vraies
+    annonces en CAD). Les estimations utilisateur, prix USD, sur demande, etc.
+    ne sont jamais retirés par ce filtre (ils gardent leur traitement propre).
+    S'il y a moins de `min_n` prix exploitables, on ne filtre pas (pas assez
+    de recul pour juger).
+    """
+    prix_ref = [
+        _get(l, "prix_affiche") for l in listings
+        if raison_exclusion_mediane(l, inclure_bricoleur) is None
+        and _get(l, "prix_affiche") is not None
+    ]
+    if len(prix_ref) < min_n:
+        return list(listings)
+
+    ref = statistics.median(prix_ref)
+    bas = ref * (min_pct / 100.0)
+    haut = ref * (max_pct / 100.0)
+
+    resultat = []
+    for l in listings:
+        # Seules les vraies annonces médiane-éligibles peuvent être écartées
+        if raison_exclusion_mediane(l, inclure_bricoleur) is None:
+            p = _get(l, "prix_affiche")
+            if p is not None and (p < bas or p > haut):
+                continue
+        resultat.append(l)
+    return resultat
+
+
 def evaluer(
     listings: Iterable,
     *,
@@ -354,7 +398,8 @@ def evaluer(
         listings, type_unite=type_unite, modele=modele, ligne=ligne, longueur_pi=longueur_pi,
     )
 
-    comparables = selectionner_comparables(
+    # Tous les comparables correspondants (triés), avant plafonnement
+    tous = selectionner_comparables(
         listings,
         type_unite=type_unite,
         modele=modele,
@@ -364,10 +409,20 @@ def evaluer(
         fenetre_annees=fenetre_annees,
         tolerance_longueur=tolerance_longueur,
         inclure_bricoleur=inclure_bricoleur,
-        max_resultats=10,
+        max_resultats=10_000,
     )
+    # Écarter les annonces au prix aberrant (complètement hors marché)
+    retenus = filtrer_aberrants(tous, inclure_bricoleur=inclure_bricoleur)
+    nb_aberrants = len(tous) - len(retenus)
+
+    comparables = retenus[:10]
     stats = calcul_stats(comparables, inclure_bricoleur=inclure_bricoleur)
     nuances = generer_nuances(comparables, annee, inclure_bricoleur=inclure_bricoleur)
+    if nb_aberrants:
+        nuances.append(
+            f"{nb_aberrants} annonce(s) au prix aberrant écartée(s) "
+            f"(hors {ABERRANT_MIN_PCT}–{ABERRANT_MAX_PCT} % du prix médian)."
+        )
 
     message = None
     if not comparables:

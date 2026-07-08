@@ -179,6 +179,49 @@ def test_estimations_jamais_dedoublonnees():
 
 
 # --------------------------------------------------------------------------- #
+# Filtre des prix aberrants
+# --------------------------------------------------------------------------- #
+
+def test_filtrer_aberrants_bas_et_haut():
+    ls = [_listing(url_annonce=f"u{i}", prix_affiche=p, ville=f"v{i}")
+          for i, p in enumerate([20000, 21000, 22000, 23000, 6000, 60000])]
+    kept = sorted(l.prix_affiche for l in engine.filtrer_aberrants(ls))
+    assert 6000 not in kept and 60000 not in kept
+    assert kept == [20000, 21000, 22000, 23000]
+
+
+def test_filtre_aberrant_pas_applique_si_trop_peu_de_donnees():
+    # Moins de 4 prix -> on ne juge pas, rien n'est retiré
+    ls = [_listing(url_annonce="u1", prix_affiche=20000, ville="A"),
+          _listing(url_annonce="u2", prix_affiche=6000, ville="B")]
+    assert len(engine.filtrer_aberrants(ls)) == 2
+
+
+def test_annonce_aberrante_absente_des_suggestions():
+    listings = [
+        _listing(url_annonce="u1", prix_affiche=20000, ville="A"),
+        _listing(url_annonce="u2", prix_affiche=21000, ville="B"),
+        _listing(url_annonce="u3", prix_affiche=22000, ville="C"),
+        _listing(url_annonce="u4", prix_affiche=23000, ville="D"),
+        _listing(url_annonce="u5", prix_affiche=6000, ville="E"),  # marketplace aberrant
+    ]
+    res = engine.evaluer(listings, type_unite="Roulotte", modele="2205S", annee=2021)
+    prix = [c.prix_affiche for c in res["comparables"]]
+    assert 6000 not in prix
+    assert res["stats"].minimum >= 20000
+
+
+def test_estimation_utilisateur_jamais_ecartee_comme_aberrante():
+    # Beaucoup d'annonces ~20 000 $, plus une estimation utilisateur volontairement basse
+    listings = [_listing(url_annonce=f"u{i}", prix_affiche=p, ville=f"v{i}")
+                for i, p in enumerate([20000, 21000, 22000, 23000])]
+    est = _listing(url_annonce=None, prix_affiche=6000, ville=None,
+                   type_vendeur="Utilisateur", is_estimation_utilisateur=True)
+    res = engine.evaluer(listings + [est], type_unite="Roulotte", modele="2205S", annee=2021)
+    assert any(getattr(c, "is_estimation_utilisateur", False) for c in res["comparables"])
+
+
+# --------------------------------------------------------------------------- #
 # Restriction par année (filtre STRICT)
 # --------------------------------------------------------------------------- #
 
