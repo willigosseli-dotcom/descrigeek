@@ -107,6 +107,22 @@
 </div>
 {% endif %}
 
+{% if suggestions_proches %}
+<div class="card" style="border-left:4px solid var(--yellow);">
+  <div class="card-title"><i class="fa fa-magnifying-glass" style="color:var(--yellow);"></i> Vouliez-vous dire… ?</div>
+  <p class="text-muted text-sm" style="margin-bottom:12px;">Aucun modèle exact trouvé. Cliquez une proposition pour relancer l'évaluation :</p>
+  <div style="display:flex; flex-wrap:wrap; gap:8px;">
+    {% for s in suggestions_proches %}
+    <button type="button" class="btn-secondary suggestion-chip"
+            data-marque="{{ s.marque or '' }}" data-ligne="{{ s.ligne or '' }}" data-modele="{{ s.modele or '' }}"
+            style="font-size:.85rem;">
+      <i class="fa fa-arrow-right"></i> {{ s.label }}
+    </button>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 {% if resultat.stats.n > 0 %}
 <div class="card">
   <div class="card-title" style="justify-content:space-between;">
@@ -219,11 +235,39 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/js/fuzzyAutocomplete.js?v=1"></script>
 <script>
 function choisirType(el) {
   document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('type_unite').value = el.dataset.type;
 }
+
+(function () {
+  const form = document.getElementById('eval-form');
+  const getType = () => document.getElementById('type_unite').value;
+  const champs = { marque: form.marque, ligne: form.ligne, modele: form.modele };
+
+  function remplir(s) {
+    if (s.marque) form.marque.value = s.marque;
+    if (s.ligne) form.ligne.value = s.ligne;
+    if (s.modele) form.modele.value = s.modele;
+  }
+
+  // Autocomplétion floue sur chaque champ (remplit les 3 à la sélection)
+  Object.entries(champs).forEach(([champ, input]) => {
+    if (input && window.attachFuzzy) {
+      window.attachFuzzy(input, { champ: champ, getTypeUnite: getType, onSelect: remplir });
+    }
+  });
+
+  // « Vouliez-vous dire… ? » : cliquer une proposition remplit et relance
+  document.querySelectorAll('.suggestion-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      remplir({ marque: btn.dataset.marque, ligne: btn.dataset.ligne, modele: btn.dataset.modele });
+      form.submit();
+    });
+  });
+})();
 </script>
 {% endblock %}

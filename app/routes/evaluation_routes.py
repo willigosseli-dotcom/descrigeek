@@ -14,6 +14,7 @@ from app.services import comparables_engine as engine
 from app.services import csv_import
 from app.services import eval_settings
 from app.services import gamme_classifier
+from app.services import fuzzy_search
 from app.templates_env import templates
 
 router = APIRouter()
@@ -121,6 +122,13 @@ async def _run_evaluation(request, user, db, type_unite, marque, ligne, modele, 
             "gamme": getattr(c, "gamme", None),
         })
 
+    # « Vouliez-vous dire… ? » : aucun comparable mais des modèles proches existent
+    suggestions_proches = []
+    if not comparables_affichage and (marque.strip() or ligne.strip() or modele.strip()):
+        suggestions_proches = await fuzzy_search.matches_proches(
+            db, type_unite=type_unite, marque=marque, ligne=ligne, modele=modele,
+        )
+
     # Journaliser l'évaluation (historique persistant), si demandé et véhicule renseigné
     if journaliser and (modele.strip() or ligne.strip()):
         db.add(EvaluationLog(
@@ -144,6 +152,7 @@ async def _run_evaluation(request, user, db, type_unite, marque, ligne, modele, 
         "longueur_cible": resultat.get("longueur_cible"),
         "gamme_cible": gamme_cible,
         "message_estimation": message_estimation,
+        "suggestions_proches": suggestions_proches,
     })
 
 
@@ -160,6 +169,20 @@ async def do_evaluer(
 ):
     return await _run_evaluation(request, user, db, type_unite, marque, ligne, modele, annee,
                                  journaliser=True)
+
+
+@router.get("/api/evaluation/suggestions")
+async def api_suggestions(
+    q: str = "", champ: str = "", type_unite: str = "",
+    user=Depends(require_login), db: AsyncSession = Depends(get_db),
+):
+    """Autocomplétion floue : renvoie les modèles proches de `q` (JSON)."""
+    if len(q.strip()) < 2:
+        return {"suggestions": []}
+    champ_v = champ if champ in ("marque", "ligne", "modele") else None
+    tu = type_unite if type_unite in TYPES_ACTIFS else None
+    sugg = await fuzzy_search.suggestions(db, q, champ=champ_v, type_unite=tu, limit=8)
+    return {"suggestions": sugg}
 
 
 @router.post("/evaluer/estimation", response_class=HTMLResponse)

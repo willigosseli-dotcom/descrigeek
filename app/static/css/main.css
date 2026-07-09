@@ -892,3 +892,17 @@ tr:hover td { background: var(--bg); }
   background: linear-gradient(90deg, var(--brand-blue) 0%, var(--brand-yellow) 62%, var(--brand-orange) 100%);
 }
 .login-logo { margin-top: 8px; }
+
+/* Menu d'autocomplétion floue */
+.fuzzy-menu {
+  position: absolute; z-index: 60; background: #fff;
+  border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 32, 68, 0.14);
+  max-height: 280px; overflow-y: auto;
+}
+.fuzzy-item {
+  padding: 8px 12px; cursor: pointer; font-size: 0.9rem;
+  display: flex; gap: 8px; align-items: baseline;
+}
+.fuzzy-item:hover, .fuzzy-item.active { background: var(--accent-light); }
+.fuzzy-sub { color: var(--text-muted); font-size: 0.82rem; }
