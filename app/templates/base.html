@@ -109,10 +109,17 @@
       {% endif %}
       <li class="nav-section-title nav-section-vente">Mise en vente</li>
       <li>
-        <a href="/mise-en-vente" class="nav-item {% if '/mise-en-vente' in request.url.path %}active{% endif %}">
+        <a href="/mise-en-vente" class="nav-item {% if request.url.path == '/mise-en-vente' %}active{% endif %}">
           <i class="fa fa-store"></i><span>Outil de mise en vente</span>
         </a>
       </li>
+      {% if user.role == 'admin' %}
+      <li>
+        <a href="/mise-en-vente/importer" class="nav-item {% if '/mise-en-vente/importer' in request.url.path %}active{% endif %}">
+          <i class="fa fa-file-import"></i><span>Importer stock neuf</span>
+        </a>
+      </li>
+      {% endif %}
       {% if user.role == 'admin' %}
       <li class="nav-section-title">Administration</li>
       <li>

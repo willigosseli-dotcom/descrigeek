@@ -16,8 +16,16 @@
 {% block content %}
 <div class="page-header">
   <h1 class="page-title"><i class="fa fa-store" style="color:var(--accent);"></i> Outil de mise en vente</h1>
-  <p class="page-subtitle">Quels compétiteurs ont ce modèle en stock, à quel prix, et depuis combien de temps</p>
+  <p class="page-subtitle">Quels compétiteurs ont ce modèle <strong>neuf</strong> en stock, à quel prix, et depuis combien de temps</p>
 </div>
+
+{% if user.role == 'admin' %}
+<p class="text-muted text-sm" style="margin:-8px 0 16px;">
+  <i class="fa fa-circle-info" style="color:var(--accent);"></i>
+  Cet outil utilise le <strong>stock neuf</strong> (jeu de données distinct des usagés).
+  <a href="/mise-en-vente/importer" style="font-weight:600;">Importer le stock neuf →</a>
+</p>
+{% endif %}
 
 <form method="post" action="/mise-en-vente" id="vente-form">
   <input type="hidden" name="type_unite" id="type_unite" value="{{ type_actif }}" />
@@ -115,7 +123,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/fuzzyAutocomplete.js?v=1"></script>
+<script src="/static/js/fuzzyAutocomplete.js?v=2"></script>
 <script>
 function choisirType(el) {
   document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
@@ -131,7 +139,7 @@ function choisirType(el) {
     if (s.modele) form.modele.value = s.modele;
   }
   [['marque', form.marque], ['ligne', form.ligne], ['modele', form.modele]].forEach(([champ, input]) => {
-    if (input && window.attachFuzzy) window.attachFuzzy(input, { champ: champ, getTypeUnite: getType, onSelect: remplir });
+    if (input && window.attachFuzzy) window.attachFuzzy(input, { champ: champ, source: 'neuf', getTypeUnite: getType, onSelect: remplir });
   });
   document.querySelectorAll('.suggestion-chip').forEach(btn => {
     btn.addEventListener('click', () => {

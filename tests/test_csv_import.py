@@ -6,7 +6,9 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.models import Base
+from sqlalchemy import select, func
+
+from app.models import Base, Listing, StockNeuf
 from app.services import csv_import
 
 CSV_PATH = Path(__file__).parent / "test_data_cas_limites.csv"
@@ -74,6 +76,22 @@ async def test_import_en_base(session):
     assert resume["nb_creees"] == 13
     assert resume["nb_disparues"] == 0
     assert resume["nb_baisses"] == 0
+
+
+@pytest.mark.asyncio
+async def test_stock_neuf_separe_des_usages(session):
+    # Import usagés -> table Listing
+    await csv_import.importer_csv(session, CONTENU)
+    # Import stock neuf -> table StockNeuf (jeu séparé)
+    header = CONTENU.splitlines()[0]
+    row = ('Roulotte,Jayco,Eagle,26.5RLDS,2026,68900,VR X,Concessionnaire,"Sherbrooke, QC",'
+           '30,N/D,Neuf,3,https://neuf/1,2026-07-01,2026-07-08,active,N/D,')
+    await csv_import.importer_csv(session, header + "\n" + row, model=StockNeuf, creer_batch=False)
+
+    n_listing = (await session.execute(select(func.count()).select_from(Listing))).scalar()
+    n_neuf = (await session.execute(select(func.count()).select_from(StockNeuf))).scalar()
+    assert n_neuf == 1          # le neuf est bien à part
+    assert n_listing == 13      # les usagés ne sont pas touchés
 
 
 # --------------------------------------------------------------------------- #

@@ -81,13 +81,14 @@ def classer(q: str, combos: list[dict], *, champ: Optional[str] = None,
     return resultats[:limit]
 
 
-async def combos_distincts(db: AsyncSession, type_unite: Optional[str] = None) -> list[dict]:
+async def combos_distincts(db: AsyncSession, type_unite: Optional[str] = None,
+                           model=Listing) -> list[dict]:
     """Combos (marque, ligne, modele) distincts présents dans les annonces."""
-    q = select(Listing.type_unite, Listing.marque, Listing.ligne, Listing.modele).where(
-        Listing.marque.isnot(None)
+    q = select(model.type_unite, model.marque, model.ligne, model.modele).where(
+        model.marque.isnot(None)
     )
     if type_unite:
-        q = q.where(Listing.type_unite == type_unite)
+        q = q.where(model.type_unite == type_unite)
     rows = (await db.execute(q)).all()
     vus, out = set(), []
     for tu, marque, ligne, modele in rows:
@@ -100,8 +101,9 @@ async def combos_distincts(db: AsyncSession, type_unite: Optional[str] = None) -
 
 
 async def suggestions(db: AsyncSession, q: str, *, champ: Optional[str] = None,
-                      type_unite: Optional[str] = None, limit: int = 8) -> list[dict]:
-    combos = await combos_distincts(db, type_unite)
+                      type_unite: Optional[str] = None, limit: int = 8,
+                      model=Listing) -> list[dict]:
+    combos = await combos_distincts(db, type_unite, model=model)
     return [
         {**c, "label": _label(c), "score": int(s)}
         for s, c in classer(q, combos, champ=champ, limit=limit)
@@ -110,9 +112,9 @@ async def suggestions(db: AsyncSession, q: str, *, champ: Optional[str] = None,
 
 async def matches_proches(db: AsyncSession, *, type_unite: Optional[str], marque: str = "",
                           ligne: str = "", modele: str = "", limit: int = 5,
-                          seuil: int = SEUIL_DEFAUT) -> list[dict]:
+                          seuil: int = SEUIL_DEFAUT, model=Listing) -> list[dict]:
     """Meilleures correspondances canoniques pour des entrées floues (« Vouliez-vous dire… »)."""
-    combos = await combos_distincts(db, type_unite)
+    combos = await combos_distincts(db, type_unite, model=model)
     q = " ".join(x for x in (marque, ligne, modele) if x and x.strip())
     return [
         {**c, "label": _label(c)}

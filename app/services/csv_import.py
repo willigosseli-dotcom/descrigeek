@@ -222,15 +222,17 @@ def parser_csv(contenu: str) -> list[dict]:
 # --------------------------------------------------------------------------- #
 
 async def importer_csv(db: AsyncSession, contenu: str, *,
-                       nom_fichier: str = "", user_id: Optional[int] = None) -> dict:
+                       nom_fichier: str = "", user_id: Optional[int] = None,
+                       model=Listing, creer_batch: bool = True) -> dict:
     """Importe le CSV : upsert par url_annonce, marque les disparues, détecte les baisses.
 
-    Retourne un résumé (dict) et crée un `ImportBatch`.
+    `model` cible la table (Listing = usagés, StockNeuf = neufs). Retourne un résumé ;
+    crée un `ImportBatch` seulement si `creer_batch`.
     """
     lignes = parser_csv(contenu)
 
     # Charger l'état actuel
-    result = await db.execute(select(Listing))
+    result = await db.execute(select(model))
     existantes = {l.url_annonce: l for l in result.scalars().all()}
 
     urls_importees: set[str] = set()
@@ -245,7 +247,7 @@ async def importer_csv(db: AsyncSession, contenu: str, *,
         existante = existantes.get(url)
 
         if existante is None:
-            listing = Listing(
+            listing = model(
                 premier_import_le=maintenant,
                 dernier_import_le=maintenant,
                 disparue=False,
@@ -284,19 +286,19 @@ async def importer_csv(db: AsyncSession, contenu: str, *,
                 listing.statut = "disparue"
             nb_disparues += 1
 
-    batch = ImportBatch(
-        imported_at=maintenant,
-        imported_by=user_id,
-        nom_fichier=nom_fichier,
-        nb_lignes_csv=len(lignes),
-        nb_importees=nb_creees + nb_maj,
-        nb_creees=nb_creees,
-        nb_maj=nb_maj,
-        nb_disparues=nb_disparues,
-        nb_baisses=len(baisses),
-        details={"baisses": baisses[:50]},
-    )
-    db.add(batch)
+    if creer_batch:
+        db.add(ImportBatch(
+            imported_at=maintenant,
+            imported_by=user_id,
+            nom_fichier=nom_fichier,
+            nb_lignes_csv=len(lignes),
+            nb_importees=nb_creees + nb_maj,
+            nb_creees=nb_creees,
+            nb_maj=nb_maj,
+            nb_disparues=nb_disparues,
+            nb_baisses=len(baisses),
+            details={"baisses": baisses[:50]},
+        ))
     await db.commit()
 
     return {

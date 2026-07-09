@@ -138,6 +138,51 @@ class Listing(Base):
     prix_precedent = Column(Integer, nullable=True)  # pour détecter les baisses
 
 
+class StockNeuf(Base):
+    """Stock NEUF chez les compétiteurs (pour l'outil de mise en vente).
+
+    Même structure que Listing (usagés) mais jeu de données séparé : l'évaluation
+    utilise les usagés, la mise en vente utilise ce stock neuf. Clé stable : url_annonce.
+    """
+    __tablename__ = "stock_neuf"
+
+    id = Column(Integer, primary_key=True, index=True)
+    url_annonce = Column(String(1000), unique=True, nullable=False, index=True)
+
+    type_unite = Column(String(50), nullable=True, index=True)
+    marque = Column(String(120), nullable=True)
+    ligne = Column(String(160), nullable=True)
+    modele = Column(String(160), nullable=True, index=True)
+    annee = Column(Integer, nullable=True, index=True)
+    prix_affiche = Column(Integer, nullable=True)
+    vendeur = Column(String(200), nullable=True)
+    type_vendeur = Column(String(60), nullable=True)
+    localisation = Column(String(200), nullable=True)
+    longueur_pi = Column(Float, nullable=True)
+    kilometrage = Column(Integer, nullable=True)
+    etat_declare = Column(String(120), nullable=True)
+    extensions = Column(String(120), nullable=True)
+    date_collecte = Column(Date, nullable=True)
+    date_derniere_observation = Column(Date, nullable=True)
+    statut = Column(String(60), nullable=True)
+    ancien_prix = Column(Integer, nullable=True)
+    notes = Column(Text, nullable=True)
+
+    ville = Column(String(160), nullable=True)
+
+    is_usd = Column(Boolean, default=False)
+    is_prix_sur_demande = Column(Boolean, default=False)
+    is_volee = Column(Boolean, default=False)
+    is_projet_bricoleur = Column(Boolean, default=False)
+    is_doublon = Column(Boolean, default=False)
+    is_notre_annonce = Column(Boolean, default=False)
+
+    premier_import_le = Column(DateTime, default=datetime.utcnow)
+    dernier_import_le = Column(DateTime, default=datetime.utcnow)
+    disparue = Column(Boolean, default=False, index=True)
+    prix_precedent = Column(Integer, nullable=True)
+
+
 class ImportBatch(Base):
     """Historique des imports de CSV (résumé de chaque import)."""
     __tablename__ = "import_batches"

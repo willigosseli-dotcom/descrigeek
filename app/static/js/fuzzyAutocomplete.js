@@ -59,7 +59,8 @@
       timer = setTimeout(async () => {
         const tu = opts.getTypeUnite ? (opts.getTypeUnite() || '') : '';
         const url = '/api/evaluation/suggestions?q=' + encodeURIComponent(q)
-          + '&champ=' + encodeURIComponent(champ) + '&type_unite=' + encodeURIComponent(tu);
+          + '&champ=' + encodeURIComponent(champ) + '&type_unite=' + encodeURIComponent(tu)
+          + '&source=' + encodeURIComponent(opts.source || '');
         try {
           const r = await fetch(url, { headers: { 'Accept': 'application/json' } });
           if (!r.ok) return;

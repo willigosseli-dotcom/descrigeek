@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.auth import require_login, require_admin
-from app.models import Listing, ImportBatch, UserEstimation, GammeModele, EvaluationLog
+from app.models import Listing, ImportBatch, UserEstimation, GammeModele, EvaluationLog, StockNeuf
 from app.services import comparables_engine as engine
 from app.services import csv_import
 from app.services import eval_settings
@@ -173,15 +173,19 @@ async def do_evaluer(
 
 @router.get("/api/evaluation/suggestions")
 async def api_suggestions(
-    q: str = "", champ: str = "", type_unite: str = "",
+    q: str = "", champ: str = "", type_unite: str = "", source: str = "",
     user=Depends(require_login), db: AsyncSession = Depends(get_db),
 ):
-    """Autocomplétion floue : renvoie les modèles proches de `q` (JSON)."""
+    """Autocomplétion floue : renvoie les modèles proches de `q` (JSON).
+
+    `source=neuf` cherche dans le stock neuf (mise en vente) ; sinon dans les usagés.
+    """
     if len(q.strip()) < 2:
         return {"suggestions": []}
     champ_v = champ if champ in ("marque", "ligne", "modele") else None
     tu = type_unite if type_unite in TYPES_ACTIFS else None
-    sugg = await fuzzy_search.suggestions(db, q, champ=champ_v, type_unite=tu, limit=8)
+    model = StockNeuf if source == "neuf" else Listing
+    sugg = await fuzzy_search.suggestions(db, q, champ=champ_v, type_unite=tu, limit=8, model=model)
     return {"suggestions": sugg}
 
 
@@ -439,11 +443,11 @@ async def do_mise_en_vente(
     if type_unite not in TYPES_ACTIFS:
         type_unite = TYPES_ONGLETS[0]["cle"]
 
-    # Stock compétiteur actif du bon type
+    # Stock NEUF compétiteur actif du bon type (jeu de données distinct des usagés)
     result = await db.execute(
-        select(Listing).where(
-            Listing.type_unite == type_unite,
-            Listing.disparue == False,  # noqa: E712
+        select(StockNeuf).where(
+            StockNeuf.type_unite == type_unite,
+            StockNeuf.disparue == False,  # noqa: E712
         )
     )
     pros = [l for l in result.scalars().all() if _est_competiteur(l)]
@@ -465,6 +469,7 @@ async def do_mise_en_vente(
     if not resultats and (marque.strip() or ligne.strip() or modele.strip()):
         suggestions_proches = await fuzzy_search.matches_proches(
             db, type_unite=type_unite, marque=marque, ligne=ligne, modele=modele,
+            model=StockNeuf,
         )
 
     return templates.TemplateResponse("evaluation/mise_en_vente.html", {
@@ -473,4 +478,50 @@ async def do_mise_en_vente(
         "form": {"marque": marque, "ligne": ligne, "modele": modele},
         "resultats": resultats, "recherche_faite": True,
         "suggestions_proches": suggestions_proches,
+    })
+
+
+# --- Import du stock NEUF (admin) : jeu de données séparé pour la mise en vente ---
+
+_CTX_IMPORT_NEUF = {
+    "import_action": "/mise-en-vente/importer",
+    "import_titre": "Importer le stock neuf",
+    "import_sous_titre": "Glissez le CSV du stock NEUF des compétiteurs (utilisé par l'outil de mise en vente).",
+}
+
+
+@router.get("/mise-en-vente/importer", response_class=HTMLResponse)
+async def page_importer_neuf(request: Request, user=Depends(require_admin),
+                             db: AsyncSession = Depends(get_db)):
+    total = await db.execute(select(StockNeuf))
+    nb_total = len(total.scalars().all())
+    return templates.TemplateResponse("evaluation/importer.html", {
+        "request": request, "user": user, "nb_total": nb_total, "historique": None,
+        **_CTX_IMPORT_NEUF,
+    })
+
+
+@router.post("/mise-en-vente/importer", response_class=HTMLResponse)
+async def do_importer_neuf(request: Request, fichier: UploadFile = File(...),
+                           user=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    erreur, resume = None, None
+    try:
+        contenu = (await fichier.read()).decode("utf-8-sig")
+        resume = await csv_import.importer_csv(
+            db, contenu, nom_fichier=fichier.filename or "", user_id=user.id,
+            model=StockNeuf, creer_batch=False,
+        )
+    except csv_import.ImportError_ as e:
+        erreur = str(e)
+    except UnicodeDecodeError:
+        erreur = "Le fichier n'est pas encodé en UTF-8. Ré-enregistrez-le en UTF-8."
+    except Exception as e:
+        erreur = f"Erreur inattendue pendant l'import : {e}"
+
+    total = await db.execute(select(StockNeuf))
+    nb_total = len(total.scalars().all())
+    return templates.TemplateResponse("evaluation/importer.html", {
+        "request": request, "user": user, "resume": resume, "erreur": erreur,
+        "nb_total": nb_total, "historique": None,
+        **_CTX_IMPORT_NEUF,
     })
