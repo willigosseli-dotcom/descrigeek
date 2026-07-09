@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Outil de mise en vente{% endblock %}
+
+{% block head %}
+<style>
+  .type-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+  .type-tab { padding:10px 18px; border-radius:10px; border:1.5px solid var(--border); background:var(--bg); font-weight:600; cursor:pointer; font-size:.9rem; color:var(--text); transition:all .12s; }
+  .type-tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .type-tab.disabled { opacity:.4; cursor:not-allowed; }
+  .type-tab .fa-lock { font-size:.7rem; margin-left:5px; }
+  .semaines-pill { font-weight:700; }
+  .semaines-manquant { color:#b04141; font-size:.8rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><i class="fa fa-store" style="color:var(--accent);"></i> Outil de mise en vente</h1>
+  <p class="page-subtitle">Quels compétiteurs ont ce modèle en stock, à quel prix, et depuis combien de temps</p>
+</div>
+
+<form method="post" action="/mise-en-vente" id="vente-form">
+  <input type="hidden" name="type_unite" id="type_unite" value="{{ type_actif }}" />
+  <div class="card">
+    <div class="card-title"><i class="fa fa-truck-moving"></i> Modèle à mettre en vente</div>
+    <div class="type-tabs">
+      {% for o in onglets %}
+        {% if o.actif %}
+        <div class="type-tab {% if o.cle == type_actif %}active{% endif %}" data-type="{{ o.cle }}" onclick="choisirType(this)">{{ o.libelle }}</div>
+        {% else %}
+        <div class="type-tab disabled" title="Bientôt disponible">{{ o.libelle }} <i class="fa fa-lock"></i></div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <div class="form-row cols-3">
+      <div class="form-group mb-0">
+        <label class="form-label">Marque</label>
+        <input class="form-control" name="marque" placeholder="ex : Jayco" value="{{ form.marque if form else '' }}" />
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label">Ligne (gamme)</label>
+        <input class="form-control" name="ligne" placeholder="ex : Eagle" value="{{ form.ligne if form else '' }}" />
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label">Modèle</label>
+        <input class="form-control" name="modele" placeholder="ex : 26.5RLDS" value="{{ form.modele if form else '' }}" />
+      </div>
+    </div>
+    <p class="form-hint" style="margin-top:10px;">
+      <i class="fa fa-circle-info" style="color:var(--accent);"></i>
+      Recherche tolérante aux fautes — les compétiteurs écrivent rarement les modèles de façon identique.
+    </p>
+  </div>
+  <div style="text-align:center; margin:8px 0 24px;">
+    <button type="submit" class="btn-primary btn-lg"><i class="fa fa-magnifying-glass"></i> Chercher chez les compétiteurs</button>
+  </div>
+</form>
+
+{% if recherche_faite %}
+{% if suggestions_proches %}
+<div class="card" style="border-left:4px solid var(--yellow);">
+  <div class="card-title"><i class="fa fa-magnifying-glass" style="color:var(--yellow);"></i> Vouliez-vous dire… ?</div>
+  <p class="text-muted text-sm" style="margin-bottom:12px;">Aucun modèle proche en stock compétiteur. Essayez une de ces correspondances :</p>
+  <div style="display:flex; flex-wrap:wrap; gap:8px;">
+    {% for s in suggestions_proches %}
+    <button type="button" class="btn-secondary suggestion-chip" data-marque="{{ s.marque or '' }}" data-ligne="{{ s.ligne or '' }}" data-modele="{{ s.modele or '' }}" style="font-size:.85rem;">
+      <i class="fa fa-arrow-right"></i> {{ s.label }}
+    </button>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  {% if resultats %}
+  <div class="card-title"><i class="fa fa-store"></i>
+    {{ resultats|length }} annonce(s) compétiteur(s) en stock pour ce modèle
+  </div>
+  <p class="text-muted text-sm" style="margin-bottom:14px;">
+    « En vente depuis » = temps écoulé depuis la <strong>première détection de l'annonce dans vos imports</strong>
+    (champ <code>premier_import_le</code>). Le CSV n'ayant pas de champ « first seen » dédié, cette durée n'est
+    fiable que si vos imports sont réguliers.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Compétiteur</th><th>Modèle</th><th>Année</th><th>Prix</th><th>En vente depuis</th><th>Ville</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for r in resultats %}
+        <tr>
+          <td><strong>{{ r.l.vendeur or r.l.type_vendeur or '—' }}</strong><br><span class="text-muted text-sm">{{ r.l.type_vendeur or '' }}</span></td>
+          <td>{{ r.l.marque or '' }} {{ r.l.ligne or '' }}<br><span class="text-muted">{{ r.l.modele or '' }}</span></td>
+          <td>{{ r.l.annee or '—' }}</td>
+          <td>{% if r.l.prix_affiche %}<strong>{{ "{:,}".format(r.l.prix_affiche).replace(",", " ") }} $</strong>{% else %}<span class="text-muted">sur demande</span>{% endif %}</td>
+          <td>
+            {% if r.semaines is not none %}<span class="semaines-pill">{{ r.semaines }} semaine{{ 's' if r.semaines != 1 else '' }}</span>
+            {% else %}<span class="semaines-manquant"><i class="fa fa-triangle-exclamation"></i> date de 1re détection manquante</span>{% endif %}
+          </td>
+          <td>{{ r.l.ville or '—' }}</td>
+          <td>{% if r.l.url_annonce %}<a href="{{ r.l.url_annonce }}" target="_blank" rel="noopener" class="btn-secondary" style="padding:5px 10px; font-size:.8rem;"><i class="fa fa-arrow-up-right-from-square"></i> Voir</a>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% elif not suggestions_proches %}
+  <p style="margin:0;"><i class="fa fa-circle-info" style="color:var(--accent);"></i>
+    <strong>Aucun compétiteur n'a ce modèle en stock actuellement.</strong>
+    (Recherche parmi les vendeurs professionnels, hors vos propres annonces.)
+  </p>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/fuzzyAutocomplete.js?v=1"></script>
+<script>
+function choisirType(el) {
+  document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('type_unite').value = el.dataset.type;
+}
+(function () {
+  const form = document.getElementById('vente-form');
+  const getType = () => document.getElementById('type_unite').value;
+  function remplir(s) {
+    if (s.marque) form.marque.value = s.marque;
+    if (s.ligne) form.ligne.value = s.ligne;
+    if (s.modele) form.modele.value = s.modele;
+  }
+  [['marque', form.marque], ['ligne', form.ligne], ['modele', form.modele]].forEach(([champ, input]) => {
+    if (input && window.attachFuzzy) window.attachFuzzy(input, { champ: champ, getTypeUnite: getType, onSelect: remplir });
+  });
+  document.querySelectorAll('.suggestion-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      remplir({ marque: btn.dataset.marque, ligne: btn.dataset.ligne, modele: btn.dataset.modele });
+      form.submit();
+    });
+  });
+})();
+</script>
+{% endblock %}

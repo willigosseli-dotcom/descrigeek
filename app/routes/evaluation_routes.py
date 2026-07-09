@@ -404,3 +404,73 @@ async def historique_evaluations(request: Request, user=Depends(require_login),
     return templates.TemplateResponse("evaluation/historique.html", {
         "request": request, "user": user, "logs": logs,
     })
+
+
+# --------------------------------------------------------------------------- #
+# Outil de mise en vente (tous les utilisateurs connectés)
+# --------------------------------------------------------------------------- #
+
+def _est_competiteur(l) -> bool:
+    """Vendeur professionnel concurrent (pas nous, pas un particulier)."""
+    if getattr(l, "is_notre_annonce", False):
+        return False
+    tv = fuzzy_search.normaliser(l.type_vendeur)
+    return ("concession" in tv) or ("commer" in tv) or ("courtier" in tv)
+
+
+@router.get("/mise-en-vente", response_class=HTMLResponse)
+async def page_mise_en_vente(request: Request, user=Depends(require_login)):
+    return templates.TemplateResponse("evaluation/mise_en_vente.html", {
+        "request": request, "user": user,
+        "onglets": TYPES_ONGLETS, "type_actif": TYPES_ONGLETS[0]["cle"],
+    })
+
+
+@router.post("/mise-en-vente", response_class=HTMLResponse)
+async def do_mise_en_vente(
+    request: Request,
+    type_unite: str = Form(...),
+    marque: str = Form(""),
+    ligne: str = Form(""),
+    modele: str = Form(""),
+    user=Depends(require_login),
+    db: AsyncSession = Depends(get_db),
+):
+    if type_unite not in TYPES_ACTIFS:
+        type_unite = TYPES_ONGLETS[0]["cle"]
+
+    # Stock compétiteur actif du bon type
+    result = await db.execute(
+        select(Listing).where(
+            Listing.type_unite == type_unite,
+            Listing.disparue == False,  # noqa: E712
+        )
+    )
+    pros = [l for l in result.scalars().all() if _est_competiteur(l)]
+
+    # Matching flou du modèle recherché sur le stock compétiteur
+    q = " ".join(x for x in (marque.strip(), ligne.strip(), modele.strip()) if x)
+    scored = fuzzy_search.scorer(q, pros, limit=50) if q else []
+
+    now = datetime.utcnow()
+    resultats = []
+    for score, l in scored:
+        # « En vente depuis » = semaines depuis premier_import_le (1re détection dans vos imports)
+        semaines = None
+        if l.premier_import_le:
+            semaines = max(0, (now - l.premier_import_le).days // 7)
+        resultats.append({"l": l, "score": score, "semaines": semaines})
+
+    suggestions_proches = []
+    if not resultats and (marque.strip() or ligne.strip() or modele.strip()):
+        suggestions_proches = await fuzzy_search.matches_proches(
+            db, type_unite=type_unite, marque=marque, ligne=ligne, modele=modele,
+        )
+
+    return templates.TemplateResponse("evaluation/mise_en_vente.html", {
+        "request": request, "user": user,
+        "onglets": TYPES_ONGLETS, "type_actif": type_unite,
+        "form": {"marque": marque, "ligne": ligne, "modele": modele},
+        "resultats": resultats, "recherche_faite": True,
+        "suggestions_proches": suggestions_proches,
+    })

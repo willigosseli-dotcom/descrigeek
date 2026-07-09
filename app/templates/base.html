@@ -90,6 +90,12 @@
           <i class="fa fa-clock-rotate-left"></i><span>Historique des évaluations</span>
         </a>
       </li>
+      <li class="nav-section-title nav-section-vente">Mise en vente</li>
+      <li>
+        <a href="/mise-en-vente" class="nav-item {% if '/mise-en-vente' in request.url.path %}active{% endif %}">
+          <i class="fa fa-store"></i><span>Outil de mise en vente</span>
+        </a>
+      </li>
       {% if user.role == 'admin' %}
       <li>
         <a href="/importer" class="nav-item {% if '/importer' in request.url.path %}active{% endif %}">

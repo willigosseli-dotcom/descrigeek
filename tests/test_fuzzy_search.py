@@ -31,3 +31,13 @@ def test_requete_hors_sujet_ne_matche_pas():
 
 def test_requete_vide():
     assert fs.classer("", COMBOS) == []
+
+
+def test_scorer_sur_objets():
+    from types import SimpleNamespace
+    items = [
+        SimpleNamespace(marque="Jayco", ligne="Eagle", modele="26.5RLDS"),
+        SimpleNamespace(marque="Keystone", ligne="Passport", modele="268BH"),
+    ]
+    res = fs.scorer("jaco eagl", items, limit=1)
+    assert res and res[0][1].modele == "26.5RLDS"

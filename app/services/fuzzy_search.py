@@ -33,8 +33,29 @@ def _label(combo: dict) -> str:
     return " · ".join(p for p in parts if p)
 
 
+def texte_de(item) -> str:
+    """Texte normalisé « marque ligne modele » d'un dict OU d'un objet (ORM)."""
+    def g(k):
+        return item.get(k) if isinstance(item, dict) else getattr(item, k, None)
+    return normaliser(" ".join(str(g(k) or "") for k in ("marque", "ligne", "modele")))
+
+
 def _texte_combo(combo: dict) -> str:
-    return normaliser(" ".join(str(combo.get(k) or "") for k in ("marque", "ligne", "modele")))
+    return texte_de(combo)
+
+
+def scorer(q: str, items: list, *, limit: int = 50, seuil: int = SEUIL_DEFAUT) -> list[tuple]:
+    """Score chaque item (dict ou objet) par similarité à `q` ; garde ceux >= seuil."""
+    qn = normaliser(q)
+    if not qn:
+        return []
+    out = []
+    for it in items:
+        score = fuzz.WRatio(qn, texte_de(it))
+        if score >= seuil:
+            out.append((int(score), it))
+    out.sort(key=lambda t: t[0], reverse=True)
+    return out[:limit]
 
 
 def classer(q: str, combos: list[dict], *, champ: Optional[str] = None,

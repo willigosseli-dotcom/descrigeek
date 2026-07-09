@@ -879,6 +879,7 @@ tr:hover td { background: var(--bg); }
 }
 .nav-section-desc::before { background: var(--brand-blue); }
 .nav-section-eval::before { background: var(--brand-yellow); }
+.nav-section-vente::before { background: var(--brand-orange); }
 
 /* Carte de connexion : barre d'accent de marque en haut */
 .login-card {
