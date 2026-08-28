@@ -1,46 +1,64 @@
 {% extends "base.html" %}
-{% block title %}Importer données VTT{% endblock %}
+{% block title %}Importer données Powersport{% endblock %}
+
+{% block head %}
+<style>
+  .dropzone {
+    border:2.5px dashed var(--border); border-radius:14px; padding:44px 24px;
+    text-align:center; background:var(--bg); cursor:pointer; transition:all .15s;
+  }
+  .dropzone.dragover { border-color:var(--accent); background:rgba(27,157,224,.06); }
+  .dropzone i.fa-cloud-arrow-up { font-size:2.6rem; color:var(--accent); margin-bottom:10px; }
+  .dropzone .filename { margin-top:12px; font-weight:700; color:var(--accent); }
+  .resume-grid { display:flex; flex-wrap:wrap; gap:24px; margin:6px 0 4px; }
+  .resume-box .val { font-size:1.7rem; font-weight:800; }
+  .resume-box .lbl { font-size:.78rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="page-header">
-  <h1 class="page-title"><i class="fa fa-file-import" style="color:var(--accent);"></i> Importer des annonces VTT / Côte-à-côte</h1>
-  <p class="page-subtitle">Glissez un fichier CSV d'annonces de VTT usagés pour alimenter le moteur d'évaluation.</p>
+  <h1 class="page-title"><i class="fa fa-file-import" style="color:var(--accent);"></i> Importer des annonces Powersport</h1>
+  <p class="page-subtitle">Glissez votre CSV d'annonces VTT / Côte-à-côte / Motoneige. Il remplace/complète la base par url d'annonce.</p>
 </div>
 
 {% if erreur %}
-<div class="card" style="border-left:4px solid #c0392b;">
-  <p style="margin:0; color:#c0392b;"><i class="fa fa-triangle-exclamation"></i> {{ erreur }}</p>
+<div class="card" style="border-left:4px solid #d21f26;">
+  <p style="margin:0;"><i class="fa fa-triangle-exclamation" style="color:#d21f26;"></i> <strong>Import refusé :</strong> {{ erreur }}</p>
 </div>
 {% endif %}
 
 {% if resume %}
 <div class="card" style="border-left:4px solid #2e9e4f;">
-  <div class="card-title" style="color:#2e9e4f;"><i class="fa fa-circle-check"></i> Import terminé</div>
-  <div style="display:flex; flex-wrap:wrap; gap:24px; margin-top:8px;">
-    <div><div style="font-size:1.4rem; font-weight:800;">{{ resume.nb_lignes_csv }}</div><div class="text-muted text-sm">Lignes lues</div></div>
-    <div><div style="font-size:1.4rem; font-weight:800; color:#2e9e4f;">{{ resume.nb_creees }}</div><div class="text-muted text-sm">Nouvelles annonces</div></div>
-    <div><div style="font-size:1.4rem; font-weight:800; color:#1470b0;">{{ resume.nb_maj }}</div><div class="text-muted text-sm">Mises à jour</div></div>
+  <div class="card-title"><i class="fa fa-circle-check" style="color:#2e9e4f;"></i> Import réussi</div>
+  <div class="resume-grid">
+    <div class="resume-box"><div class="val">{{ resume.nb_importees }}</div><div class="lbl">Annonces importées</div></div>
+    <div class="resume-box"><div class="val" style="color:#2e9e4f;">{{ resume.nb_creees }}</div><div class="lbl">Nouvelles</div></div>
+    <div class="resume-box"><div class="val">{{ resume.nb_maj }}</div><div class="lbl">Mises à jour</div></div>
+    <div class="resume-box"><div class="val">{{ resume.nb_lignes_csv }}</div><div class="lbl">Lignes lues</div></div>
   </div>
 </div>
 {% endif %}
 
 <div class="card">
-  <div class="card-title"><i class="fa fa-upload"></i> Téléverser un fichier CSV</div>
-  <p class="text-muted text-sm" style="margin-bottom:16px;">
-    Colonnes reconnues : <code>url_annonce</code> (obligatoire), <code>type_unite</code>, <code>marque</code>, <code>modele</code>, <code>annee</code>, <code>cylindree_cc</code>, <code>prix_affiche</code>, <code>kilometrage</code>, <code>vendeur</code>, <code>type_vendeur</code>, <code>ville</code>, <code>etat</code>, <code>statut</code>, <code>notes</code>, <code>date_collecte</code>, <code>is_notre_annonce</code>, <code>disparue</code>.
-  </p>
-  <form method="post" action="/vtt/importer" enctype="multipart/form-data">
-    <div class="form-group">
-      <label class="form-label">Fichier CSV (encodage UTF-8)</label>
-      <input class="form-control" type="file" name="fichier" accept=".csv,text/csv" required />
+  <form method="post" action="/vtt/importer" enctype="multipart/form-data" id="import-form">
+    <label class="dropzone" id="dropzone" for="fichier">
+      <i class="fa fa-cloud-arrow-up"></i>
+      <div style="font-weight:700; font-size:1.05rem;">Glissez votre fichier CSV ici</div>
+      <div class="text-muted text-sm" style="margin-top:4px;">ou cliquez pour choisir un fichier (.csv, UTF-8)</div>
+      <div class="filename" id="filename"></div>
+      <input type="file" name="fichier" id="fichier" accept=".csv,text/csv" style="display:none;" />
+    </label>
+    <div style="margin-top:16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <button type="submit" class="btn-primary btn-lg" id="import-btn">
+        <i class="fa fa-file-import"></i> Importer
+      </button>
+      <span class="text-muted text-sm">Base actuelle : <strong>{{ nb_total }}</strong> annonce(s) Powersport.</span>
+      <span id="import-msg" style="display:none; color:#d21f26; font-weight:600; font-size:.9rem;">
+        <i class="fa fa-triangle-exclamation"></i> Choisis d'abord un fichier CSV (clique la zone ou glisse-le dedans).
+      </span>
     </div>
-    <button type="submit" class="btn-primary"><i class="fa fa-file-import"></i> Importer</button>
   </form>
-</div>
-
-<div class="card">
-  <div class="card-title"><i class="fa fa-database"></i> Stock actuel</div>
-  <p><strong>{{ nb_total }}</strong> annonce{{ 's' if nb_total != 1 else '' }} VTT dans la base de données.</p>
 </div>
 
 {% if historique %}
@@ -48,17 +66,15 @@
   <div class="card-title"><i class="fa fa-clock-rotate-left"></i> Derniers imports</div>
   <div class="table-wrap">
     <table>
-      <thead>
-        <tr><th>Date</th><th>Fichier</th><th>Lues</th><th>Créées</th><th>Mises à jour</th></tr>
-      </thead>
+      <thead><tr><th>Date</th><th>Fichier</th><th>Lues</th><th>Nouvelles</th><th>Mises à jour</th></tr></thead>
       <tbody>
-        {% for b in historique %}
+        {% for h in historique %}
         <tr>
-          <td class="text-muted text-sm">{{ b.imported_at.strftime("%d %b %Y %H:%M") if b.imported_at else '—' }}</td>
-          <td>{{ b.nom_fichier or '—' }}</td>
-          <td>{{ b.nb_lignes_csv }}</td>
-          <td style="color:#2e9e4f; font-weight:700;">{{ b.nb_creees }}</td>
-          <td style="color:#1470b0; font-weight:700;">{{ b.nb_maj }}</td>
+          <td>{{ h.imported_at.strftime("%d %b %Y %H:%M") }}</td>
+          <td class="text-muted">{{ h.nom_fichier or '—' }}</td>
+          <td>{{ h.nb_lignes_csv }}</td>
+          <td style="color:#2e9e4f; font-weight:700;">{{ h.nb_creees }}</td>
+          <td style="color:#1470b0; font-weight:700;">{{ h.nb_maj }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -66,4 +82,57 @@
   </div>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const dz = document.getElementById('dropzone');
+const input = document.getElementById('fichier');
+const fname = document.getElementById('filename');
+const form = document.getElementById('import-form');
+const msg = document.getElementById('import-msg');
+
+function lancerImport() {
+  const btn = document.getElementById('import-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Import en cours...';
+  form.submit();
+}
+
+input.addEventListener('change', () => {
+  if (input.files.length) {
+    msg.style.display = 'none';
+    fname.textContent = input.files[0].name;
+    lancerImport();
+  }
+});
+
+['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => {
+  e.preventDefault(); dz.classList.add('dragover');
+}));
+['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => {
+  e.preventDefault(); dz.classList.remove('dragover');
+}));
+dz.addEventListener('drop', e => {
+  if (e.dataTransfer.files.length) {
+    input.files = e.dataTransfer.files;
+    msg.style.display = 'none';
+    fname.textContent = input.files[0].name;
+    lancerImport();
+  }
+});
+
+form.addEventListener('submit', (e) => {
+  if (!input.files.length) {
+    e.preventDefault();
+    msg.style.display = 'inline';
+    dz.classList.add('dragover');
+    setTimeout(() => dz.classList.remove('dragover'), 1200);
+    return;
+  }
+  const btn = document.getElementById('import-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Import en cours...';
+});
+</script>
 {% endblock %}
