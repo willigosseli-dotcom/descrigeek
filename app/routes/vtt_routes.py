@@ -21,6 +21,7 @@ router = APIRouter()
 TYPES_ONGLETS = [
     {"cle": "VTT", "libelle": "VTT", "actif": True},
     {"cle": "Côte-à-côte", "libelle": "Côte-à-côte", "actif": True},
+    {"cle": "Motoneige", "libelle": "Motoneige", "actif": True},
 ]
 TYPES_ACTIFS = {t["cle"] for t in TYPES_ONGLETS if t["actif"]}
 

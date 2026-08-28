@@ -309,13 +309,15 @@ class VttListing(Base):
     id = Column(Integer, primary_key=True, index=True)
     url_annonce = Column(String(1000), unique=True, nullable=False, index=True)
 
-    type_unite = Column(String(50), nullable=True, index=True)   # VTT, Côte-à-côte
+    type_unite = Column(String(50), nullable=True, index=True)   # VTT, Côte-à-côte, Motoneige
     marque = Column(String(120), nullable=True)
+    gamme = Column(String(160), nullable=True)                    # ex. Ranger, RZR
     modele = Column(String(160), nullable=True, index=True)
     annee = Column(Integer, nullable=True, index=True)
     cylindree_cc = Column(Integer, nullable=True)                 # ex. 700
     prix_affiche = Column(Integer, nullable=True)
     kilometrage = Column(Integer, nullable=True)
+    heures = Column(Integer, nullable=True)
     vendeur = Column(String(200), nullable=True)
     type_vendeur = Column(String(60), nullable=True)
     localisation = Column(String(200), nullable=True)
@@ -324,6 +326,7 @@ class VttListing(Base):
     statut = Column(String(60), nullable=True)
     notes = Column(Text, nullable=True)
     date_collecte = Column(Date, nullable=True)
+    date_derniere_observation = Column(Date, nullable=True)
 
     is_usd = Column(Boolean, default=False)
     is_prix_sur_demande = Column(Boolean, default=False)
@@ -359,6 +362,7 @@ class VttUserEstimation(Base):
     id = Column(Integer, primary_key=True, index=True)
     type_unite = Column(String(50), nullable=True, index=True)
     marque = Column(String(120), nullable=True)
+    gamme = Column(String(160), nullable=True)
     modele = Column(String(160), nullable=True, index=True)
     annee = Column(Integer, nullable=True, index=True)
     cylindree_cc = Column(Integer, nullable=True)

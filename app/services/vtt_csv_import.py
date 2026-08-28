@@ -1,4 +1,4 @@
-"""Import CSV pour les annonces VTT / Côte-à-côte usagés."""
+"""Import CSV pour les annonces VTT / Côte-à-côte / Motoneige usagés."""
 import csv, io, re
 from datetime import datetime
 
@@ -14,15 +14,6 @@ class ImportError_(Exception):
 
 COLONNES_REQUISES = {"url_annonce"}
 
-TYPES_VALIDES = {"VTT", "Côte-à-côte", "Cote-a-cote", "Side-by-side", "SxS"}
-
-
-def _normaliser_type(v: str) -> str:
-    v = v.strip()
-    if re.search(r"cote|side|sxs|sbs|ssv", v, re.I):
-        return "Côte-à-côte"
-    return "VTT"
-
 
 def _int_ou_none(v: str):
     d = re.sub(r"[^\d]", "", v or "")
@@ -33,13 +24,29 @@ def _bool_champ(v: str) -> bool:
     return (v or "").strip().lower() in ("1", "true", "oui", "yes", "x")
 
 
+def _date_ou_none(v: str):
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"):
+        try:
+            return datetime.strptime((v or "").strip(), fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _ville_depuis_localisation(loc: str) -> str | None:
+    """Extrait la ville depuis 'Ville, Province' ou retourne None."""
+    if not loc:
+        return None
+    return loc.split(",")[0].strip() or None
+
+
 async def importer_csv(db: AsyncSession, contenu: str,
                        nom_fichier: str = "", user_id=None) -> dict:
     reader = csv.DictReader(io.StringIO(contenu))
     colonnes = set(reader.fieldnames or [])
     manquantes = COLONNES_REQUISES - colonnes
     if manquantes:
-        raise ImportError_(f"Colonnes manquantes dans le CSV : {', '.join(sorted(manquantes))}")
+        raise ImportError_(f"Colonne manquante dans le CSV : {', '.join(sorted(manquantes))}")
 
     lignes = list(reader)
     nb_creees = nb_maj = 0
@@ -49,46 +56,52 @@ async def importer_csv(db: AsyncSession, contenu: str,
         if not url:
             continue
 
-        # Vérifier si l'annonce existe déjà
         res = await db.execute(select(VttListing).where(VttListing.url_annonce == url))
         existant = res.scalar_one_or_none()
 
-        type_v = _normaliser_type(row.get("type_unite") or "VTT")
+        # Colonnes du CSV — supporte "cylindree" ET "cylindree_cc"
+        cylindree = _int_ou_none(row.get("cylindree") or row.get("cylindree_cc") or "")
         prix = _int_ou_none(row.get("prix_affiche") or row.get("prix") or "")
-        cylindree = _int_ou_none(row.get("cylindree_cc") or row.get("cylindree") or "")
         km = _int_ou_none(row.get("kilometrage") or row.get("km") or "")
-        try:
-            date_c = datetime.strptime(row.get("date_collecte", ""), "%Y-%m-%d").date() if row.get("date_collecte") else None
-        except ValueError:
-            date_c = None
+        heures = _int_ou_none(row.get("heures") or "")
+        loc = (row.get("localisation") or "").strip() or None
+        ville = (row.get("ville") or _ville_depuis_localisation(loc) or "")
+
+        # ancien_prix / prix_precedent
+        ancien = _int_ou_none(row.get("ancien_prix") or row.get("prix_precedent") or "")
 
         champs = dict(
-            type_unite=type_v,
+            type_unite=(row.get("type_unite") or "VTT").strip(),
             marque=(row.get("marque") or "").strip() or None,
+            gamme=(row.get("gamme") or "").strip() or None,
             modele=(row.get("modele") or "").strip() or None,
             annee=_int_ou_none(row.get("annee") or ""),
             cylindree_cc=cylindree,
             prix_affiche=prix,
             kilometrage=km,
+            heures=heures,
             vendeur=(row.get("vendeur") or "").strip() or None,
             type_vendeur=(row.get("type_vendeur") or "").strip() or None,
-            localisation=(row.get("localisation") or "").strip() or None,
-            ville=(row.get("ville") or "").strip() or None,
-            etat_declare=(row.get("etat") or row.get("etat_declare") or "").strip() or None,
+            localisation=loc,
+            ville=ville or None,
+            etat_declare=(row.get("etat_declare") or row.get("etat") or "").strip() or None,
             statut=(row.get("statut") or "").strip() or None,
             notes=(row.get("notes") or "").strip() or None,
-            date_collecte=date_c,
+            date_collecte=_date_ou_none(row.get("date_collecte") or ""),
+            date_derniere_observation=_date_ou_none(row.get("date_derniere_observation") or ""),
             is_usd=_bool_champ(row.get("is_usd") or ""),
             is_prix_sur_demande=_bool_champ(row.get("is_prix_sur_demande") or ""),
             is_volee=_bool_champ(row.get("is_volee") or ""),
             is_notre_annonce=_bool_champ(row.get("is_notre_annonce") or ""),
             is_doublon=_bool_champ(row.get("is_doublon") or ""),
             disparue=_bool_champ(row.get("disparue") or ""),
+            prix_precedent=ancien,
         )
 
         if existant:
-            if existant.prix_affiche != prix and prix is not None:
-                existant.prix_precedent = existant.prix_affiche
+            # Conserver l'ancien prix si le prix change
+            if prix is not None and existant.prix_affiche != prix and ancien is None:
+                champs["prix_precedent"] = existant.prix_affiche
             for k, v in champs.items():
                 setattr(existant, k, v)
             existant.dernier_import_le = datetime.utcnow()

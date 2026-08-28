@@ -129,7 +129,8 @@
         {% for c in comparables %}
         <tr {% if c.est_estimation %}style="background:#f5f1ff;"{% elif c.exclusion %}style="background:#fffdf5;"{% endif %}>
           <td>
-            <strong>{{ c.l.marque or '' }}</strong><br>
+            <strong>{{ c.l.marque or '' }}</strong>
+            {% if c.l.gamme %} <span class="text-muted">{{ c.l.gamme }}</span>{% endif %}<br>
             <span class="text-muted">{{ c.l.modele or '' }}</span>
           </td>
           <td>{{ c.l.annee or '—' }}</td>
