@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Importer données VTT{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><i class="fa fa-file-import" style="color:var(--accent);"></i> Importer des annonces VTT / Côte-à-côte</h1>
+  <p class="page-subtitle">Glissez un fichier CSV d'annonces de VTT usagés pour alimenter le moteur d'évaluation.</p>
+</div>
+
+{% if erreur %}
+<div class="card" style="border-left:4px solid #c0392b;">
+  <p style="margin:0; color:#c0392b;"><i class="fa fa-triangle-exclamation"></i> {{ erreur }}</p>
+</div>
+{% endif %}
+
+{% if resume %}
+<div class="card" style="border-left:4px solid #2e9e4f;">
+  <div class="card-title" style="color:#2e9e4f;"><i class="fa fa-circle-check"></i> Import terminé</div>
+  <div style="display:flex; flex-wrap:wrap; gap:24px; margin-top:8px;">
+    <div><div style="font-size:1.4rem; font-weight:800;">{{ resume.nb_lignes_csv }}</div><div class="text-muted text-sm">Lignes lues</div></div>
+    <div><div style="font-size:1.4rem; font-weight:800; color:#2e9e4f;">{{ resume.nb_creees }}</div><div class="text-muted text-sm">Nouvelles annonces</div></div>
+    <div><div style="font-size:1.4rem; font-weight:800; color:#1470b0;">{{ resume.nb_maj }}</div><div class="text-muted text-sm">Mises à jour</div></div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-title"><i class="fa fa-upload"></i> Téléverser un fichier CSV</div>
+  <p class="text-muted text-sm" style="margin-bottom:16px;">
+    Colonnes reconnues : <code>url_annonce</code> (obligatoire), <code>type_unite</code>, <code>marque</code>, <code>modele</code>, <code>annee</code>, <code>cylindree_cc</code>, <code>prix_affiche</code>, <code>kilometrage</code>, <code>vendeur</code>, <code>type_vendeur</code>, <code>ville</code>, <code>etat</code>, <code>statut</code>, <code>notes</code>, <code>date_collecte</code>, <code>is_notre_annonce</code>, <code>disparue</code>.
+  </p>
+  <form method="post" action="/vtt/importer" enctype="multipart/form-data">
+    <div class="form-group">
+      <label class="form-label">Fichier CSV (encodage UTF-8)</label>
+      <input class="form-control" type="file" name="fichier" accept=".csv,text/csv" required />
+    </div>
+    <button type="submit" class="btn-primary"><i class="fa fa-file-import"></i> Importer</button>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-title"><i class="fa fa-database"></i> Stock actuel</div>
+  <p><strong>{{ nb_total }}</strong> annonce{{ 's' if nb_total != 1 else '' }} VTT dans la base de données.</p>
+</div>
+
+{% if historique %}
+<div class="card">
+  <div class="card-title"><i class="fa fa-clock-rotate-left"></i> Derniers imports</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Fichier</th><th>Lues</th><th>Créées</th><th>Mises à jour</th></tr>
+      </thead>
+      <tbody>
+        {% for b in historique %}
+        <tr>
+          <td class="text-muted text-sm">{{ b.imported_at.strftime("%d %b %Y %H:%M") if b.imported_at else '—' }}</td>
+          <td>{{ b.nom_fichier or '—' }}</td>
+          <td>{{ b.nb_lignes_csv }}</td>
+          <td style="color:#2e9e4f; font-weight:700;">{{ b.nb_creees }}</td>
+          <td style="color:#1470b0; font-weight:700;">{{ b.nb_maj }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

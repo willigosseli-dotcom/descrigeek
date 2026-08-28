@@ -296,3 +296,91 @@ class EvalSetting(Base):
     ponderation_particulier_pct = Column(Integer, default=15)
     tolerance_longueur_pi = Column(Float, default=2.0)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+# =====================================================================
+# ÉVALUATION DE PRIX — VTT & CÔTE-À-CÔTE
+# =====================================================================
+
+class VttListing(Base):
+    """Annonce de VTT/côte-à-côte usagé importée depuis CSV."""
+    __tablename__ = "vtt_listings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    url_annonce = Column(String(1000), unique=True, nullable=False, index=True)
+
+    type_unite = Column(String(50), nullable=True, index=True)   # VTT, Côte-à-côte
+    marque = Column(String(120), nullable=True)
+    modele = Column(String(160), nullable=True, index=True)
+    annee = Column(Integer, nullable=True, index=True)
+    cylindree_cc = Column(Integer, nullable=True)                 # ex. 700
+    prix_affiche = Column(Integer, nullable=True)
+    kilometrage = Column(Integer, nullable=True)
+    vendeur = Column(String(200), nullable=True)
+    type_vendeur = Column(String(60), nullable=True)
+    localisation = Column(String(200), nullable=True)
+    ville = Column(String(160), nullable=True)
+    etat_declare = Column(String(120), nullable=True)
+    statut = Column(String(60), nullable=True)
+    notes = Column(Text, nullable=True)
+    date_collecte = Column(Date, nullable=True)
+
+    is_usd = Column(Boolean, default=False)
+    is_prix_sur_demande = Column(Boolean, default=False)
+    is_volee = Column(Boolean, default=False)
+    is_notre_annonce = Column(Boolean, default=False)
+    is_doublon = Column(Boolean, default=False)
+
+    premier_import_le = Column(DateTime, default=datetime.utcnow)
+    dernier_import_le = Column(DateTime, default=datetime.utcnow)
+    disparue = Column(Boolean, default=False, index=True)
+    prix_precedent = Column(Integer, nullable=True)
+
+
+class VttImportBatch(Base):
+    """Historique des imports CSV VTT."""
+    __tablename__ = "vtt_import_batches"
+
+    id = Column(Integer, primary_key=True, index=True)
+    imported_at = Column(DateTime, default=datetime.utcnow)
+    imported_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    nom_fichier = Column(String(255), nullable=True)
+    nb_lignes_csv = Column(Integer, default=0)
+    nb_importees = Column(Integer, default=0)
+    nb_creees = Column(Integer, default=0)
+    nb_maj = Column(Integer, default=0)
+    details = Column(JSON, nullable=True)
+
+
+class VttUserEstimation(Base):
+    """Estimation manuelle d'un VTT par un utilisateur."""
+    __tablename__ = "vtt_user_estimations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    type_unite = Column(String(50), nullable=True, index=True)
+    marque = Column(String(120), nullable=True)
+    modele = Column(String(160), nullable=True, index=True)
+    annee = Column(Integer, nullable=True, index=True)
+    cylindree_cc = Column(Integer, nullable=True)
+    valeur_estimee = Column(Integer, nullable=False)
+    note = Column(Text, nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    auteur = Column(String(120), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class VttEvaluationLog(Base):
+    """Historique des évaluations VTT."""
+    __tablename__ = "vtt_evaluation_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    auteur = Column(String(120), nullable=True)
+    type_unite = Column(String(50), nullable=True)
+    marque = Column(String(120), nullable=True)
+    modele = Column(String(160), nullable=True)
+    annee = Column(Integer, nullable=True)
+    cylindree_cc = Column(Integer, nullable=True)
+    prix_median = Column(Integer, nullable=True)
+    nb_comparables = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)

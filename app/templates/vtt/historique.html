@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Historique évaluations VTT{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><i class="fa fa-clock-rotate-left" style="color:var(--accent);"></i> Historique des évaluations VTT</h1>
+  <p class="page-subtitle">Dernières évaluations effectuées par l'équipe</p>
+</div>
+
+<div class="card">
+  {% if logs %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Utilisateur</th><th>Type</th><th>Marque / Modèle</th><th>Année</th><th>Médian</th><th>Comparables</th></tr>
+      </thead>
+      <tbody>
+        {% for l in logs %}
+        <tr>
+          <td class="text-muted text-sm">{{ l.created_at.strftime("%d %b %Y %H:%M") if l.created_at else '—' }}</td>
+          <td>{{ l.auteur or '—' }}</td>
+          <td>{{ l.type_unite or '—' }}</td>
+          <td><strong>{{ l.marque or '' }}</strong> {{ l.modele or '' }}</td>
+          <td>{{ l.annee or '—' }}</td>
+          <td>
+            {% if l.prix_median %}<strong>{{ "{:,}".format(l.prix_median).replace(",", " ") }} $</strong>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td>{{ l.nb_comparables }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted" style="text-align:center; padding:32px 0;">
+    <i class="fa fa-inbox" style="font-size:2rem; display:block; margin-bottom:12px; opacity:.3;"></i>
+    Aucune évaluation VTT enregistrée pour l'instant.
+  </p>
+  {% endif %}
+</div>
+{% endblock %}

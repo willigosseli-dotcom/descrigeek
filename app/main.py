@@ -10,7 +10,7 @@ load_dotenv()
 
 from app.database import init_db
 from app.auth import NotAuthenticatedException, NotAuthorizedException
-from app.routes import auth_routes, dashboard_routes, admin_routes, profile_routes, examples_routes, description_routes, evaluation_routes
+from app.routes import auth_routes, dashboard_routes, admin_routes, profile_routes, examples_routes, evaluation_routes, vtt_routes
 
 
 @asynccontextmanager
@@ -35,8 +35,8 @@ app.include_router(dashboard_routes.router)
 app.include_router(admin_routes.router)
 app.include_router(profile_routes.router)
 app.include_router(examples_routes.router)
-app.include_router(description_routes.router)
 app.include_router(evaluation_routes.router)
+app.include_router(vtt_routes.router)
 
 # Instance Jinja2Templates partagée (filtres + globaux enregistrés dans templates_env)
 from app.templates_env import templates as _templates  # noqa: F401 — déclenche l'enregistrement

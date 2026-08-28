@@ -68,18 +68,7 @@
           <i class="fa fa-house"></i><span>Tableau de bord</span>
         </a>
       </li>
-      <li class="nav-section-title nav-section-desc">Génération de descriptions</li>
-      <li>
-        <a href="/generate" class="nav-item {% if '/generate' in request.url.path %}active{% endif %}">
-          <i class="fa fa-wand-magic-sparkles"></i><span>Générer</span>
-        </a>
-      </li>
-      <li>
-        <a href="/history" class="nav-item {% if '/history' in request.url.path %}active{% endif %}">
-          <i class="fa fa-clock-rotate-left"></i><span>Historique</span>
-        </a>
-      </li>
-      <li class="nav-section-title nav-section-eval">Évaluation de véhicule</li>
+      <li class="nav-section-title nav-section-eval">Roulotte usagée</li>
       <li>
         <a href="/evaluer" class="nav-item {% if request.url.path == '/evaluer' %}active{% endif %}">
           <i class="fa fa-tags"></i><span>Évaluer un véhicule</span>
@@ -104,6 +93,24 @@
       <li>
         <a href="/evaluer/reglages" class="nav-item {% if '/evaluer/reglages' in request.url.path %}active{% endif %}">
           <i class="fa fa-scale-balanced"></i><span>Réglages évaluation</span>
+        </a>
+      </li>
+      {% endif %}
+      <li class="nav-section-title" style="margin-top:10px;">VTT usagés</li>
+      <li>
+        <a href="/vtt/evaluer" class="nav-item {% if '/vtt/evaluer' in request.url.path %}active{% endif %}">
+          <i class="fa fa-tags"></i><span>Évaluer un VTT</span>
+        </a>
+      </li>
+      <li>
+        <a href="/vtt/historique" class="nav-item {% if '/vtt/historique' in request.url.path %}active{% endif %}">
+          <i class="fa fa-clock-rotate-left"></i><span>Historique évaluations</span>
+        </a>
+      </li>
+      {% if user.role == 'admin' %}
+      <li>
+        <a href="/vtt/importer" class="nav-item {% if '/vtt/importer' in request.url.path %}active{% endif %}">
+          <i class="fa fa-file-import"></i><span>Importer données VTT</span>
         </a>
       </li>
       {% endif %}

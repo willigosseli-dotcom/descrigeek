@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}Évaluer un VTT{% endblock %}
+
+{% block head %}
+<style>
+  .type-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+  .type-tab {
+    padding:10px 18px; border-radius:10px; border:1.5px solid var(--border);
+    background:var(--bg); font-weight:600; cursor:pointer; font-size:0.9rem;
+    color:var(--text); transition:all .12s;
+  }
+  .type-tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn-evaluer {
+    background:#d21f26; color:#fff; border:none; border-radius:12px;
+    padding:16px 48px; font-size:1.25rem; font-weight:800; letter-spacing:.05em;
+    cursor:pointer; box-shadow:0 4px 14px rgba(210,31,38,.35); transition:all .12s;
+  }
+  .btn-evaluer:hover { background:#b31a20; transform:translateY(-1px); }
+  .stat-grid { display:flex; flex-wrap:wrap; gap:24px; margin:12px 0; }
+  .stat-box .val { font-size:1.6rem; font-weight:800; color:var(--accent); }
+  .stat-box .lbl { font-size:.78rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em; }
+  .badge-niveau { font-size:.7rem; padding:2px 8px; border-radius:20px; background:var(--bg); border:1px solid var(--border); white-space:nowrap; }
+  .badge-exclu  { font-size:.7rem; padding:2px 8px; border-radius:20px; background:#fff3cd; color:#8a6d00; border:1px solid #ffe08a; white-space:nowrap; }
+  .badge-user   { font-size:.7rem; padding:2px 8px; border-radius:20px; background:#ede9fe; color:#6d28d9; border:1px solid #c4b5fd; white-space:nowrap; font-weight:600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><i class="fa fa-tags" style="color:var(--accent);"></i> Évaluer un VTT / Côte-à-côte</h1>
+  <p class="page-subtitle">Analyse de marché à partir de vos annonces comparables</p>
+</div>
+
+<form method="post" action="/vtt/evaluer" id="eval-form">
+  <input type="hidden" name="type_unite" id="type_unite" value="{{ type_actif }}" />
+
+  <div class="card">
+    <div class="card-title"><i class="fa fa-motorcycle"></i> Type de véhicule</div>
+    <div class="type-tabs">
+      {% for o in onglets %}
+      <div class="type-tab {% if o.cle == type_actif %}active{% endif %}"
+           data-type="{{ o.cle }}" onclick="choisirType(this)">{{ o.libelle }}</div>
+      {% endfor %}
+    </div>
+
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label class="form-label">Marque</label>
+        <input class="form-control" name="marque" placeholder="ex : Can-Am, Polaris, Yamaha"
+               value="{{ form.marque if form else '' }}" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Modèle</label>
+        <input class="form-control" name="modele" placeholder="ex : Outlander 700, RZR XP 1000"
+               value="{{ form.modele if form else '' }}" />
+      </div>
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group mb-0">
+        <label class="form-label">Année</label>
+        <input class="form-control" type="number" name="annee" min="1980" max="2035"
+               placeholder="ex : 2022" value="{{ form.annee if form else '' }}" />
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin:8px 0 28px;">
+    <button type="submit" class="btn-evaluer"><i class="fa fa-magnifying-glass-dollar"></i> ÉVALUER</button>
+  </div>
+</form>
+
+{% if resultat %}
+{% if message_estimation %}
+<div class="card" style="border-left:4px solid #2e9e4f;">
+  <p style="margin:0;"><i class="fa fa-circle-check" style="color:#2e9e4f;"></i> {{ message_estimation }}</p>
+</div>
+{% endif %}
+{% if resultat.message %}
+<div class="card" style="border-left:4px solid var(--accent);">
+  <p style="margin:0;"><i class="fa fa-circle-info" style="color:var(--accent);"></i> {{ resultat.message }}</p>
+</div>
+{% endif %}
+
+{% if suggestions_proches %}
+<div class="card" style="border-left:4px solid var(--yellow);">
+  <div class="card-title"><i class="fa fa-magnifying-glass" style="color:var(--yellow);"></i> Vouliez-vous dire… ?</div>
+  <p class="text-muted text-sm" style="margin-bottom:12px;">Aucun modèle exact trouvé. Cliquez une proposition pour relancer l'évaluation :</p>
+  <div style="display:flex; flex-wrap:wrap; gap:8px;">
+    {% for s in suggestions_proches %}
+    <button type="button" class="btn-secondary suggestion-chip"
+            data-marque="{{ s.marque or '' }}" data-modele="{{ s.modele or '' }}"
+            style="font-size:.85rem;">
+      <i class="fa fa-arrow-right"></i> {{ s.label }}
+    </button>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if resultat.stats.n > 0 %}
+<div class="card">
+  <div class="card-title"><span><i class="fa fa-chart-line"></i> Analyse de marché</span></div>
+  <p style="font-size:1.05rem; font-weight:600; margin-bottom:8px;">{{ resultat.phrase }}</p>
+  <div class="stat-grid">
+    <div class="stat-box"><div class="val">{{ "{:,}".format(resultat.stats.mediane).replace(",", " ") }} $</div><div class="lbl">Prix médian</div></div>
+    <div class="stat-box"><div class="val">{{ "{:,}".format(resultat.stats.minimum).replace(",", " ") }}–{{ "{:,}".format(resultat.stats.maximum).replace(",", " ") }} $</div><div class="lbl">Fourchette min–max</div></div>
+    <div class="stat-box"><div class="val">{{ "{:,}".format(resultat.stats.p25).replace(",", " ") }}–{{ "{:,}".format(resultat.stats.p75).replace(",", " ") }} $</div><div class="lbl">Zone P25–P75</div></div>
+    <div class="stat-box"><div class="val">{{ resultat.stats.n }}</div><div class="lbl">Annonces retenues</div></div>
+  </div>
+  {% if resultat.nuances %}
+  <ul style="margin:12px 0 0; padding-left:20px; color:var(--text-muted); font-size:.9rem;">
+    {% for n in resultat.nuances %}<li style="margin-bottom:4px;">{{ n }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if comparables %}
+<div class="card">
+  <div class="card-title"><i class="fa fa-list"></i> Comparables ({{ comparables|length }})</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Véhicule</th><th>Année</th><th>Prix</th><th>Vendeur</th><th>Ville</th><th>Correspondance</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in comparables %}
+        <tr {% if c.est_estimation %}style="background:#f5f1ff;"{% elif c.exclusion %}style="background:#fffdf5;"{% endif %}>
+          <td>
+            <strong>{{ c.l.marque or '' }}</strong><br>
+            <span class="text-muted">{{ c.l.modele or '' }}</span>
+          </td>
+          <td>{{ c.l.annee or '—' }}</td>
+          <td>
+            {% if c.l.prix_affiche %}<strong>{{ "{:,}".format(c.l.prix_affiche).replace(",", " ") }} $</strong>
+            {% else %}<span class="text-muted">sur demande</span>{% endif %}
+            {% if c.est_estimation %}<br><span class="badge-user"><i class="fa fa-user-pen"></i> Estimation</span>
+            {% elif c.exclusion %}<br><span class="badge-exclu">{{ c.exclusion }}</span>{% endif %}
+          </td>
+          <td>{% if c.est_estimation %}Utilisateur{% else %}{{ c.l.type_vendeur or '—' }}{% endif %}</td>
+          <td>
+            {% if c.est_estimation %}
+              <span class="text-muted" style="font-size:.82rem;">
+                {{ c.l.auteur or '—' }}{% if c.l.created_at %}<br>{{ c.l.created_at.strftime("%d %b %Y %H:%M") }}{% endif %}
+              </span>
+            {% else %}{{ c.l.ville or '—' }}{% endif %}
+          </td>
+          <td><span class="badge-niveau">{{ c.niveau }}</span></td>
+          <td>
+            {% if c.l.url_annonce %}
+            <a href="{{ c.l.url_annonce }}" target="_blank" rel="noopener" class="btn-secondary" style="padding:5px 10px; font-size:.8rem;">
+              <i class="fa fa-arrow-up-right-from-square"></i> Voir
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if form and (form.modele or form.marque) %}
+<div class="card" style="border-top:3px solid var(--accent);">
+  <div class="card-title"><i class="fa fa-user-pen"></i> Ajouter votre estimation de valeur marchande</div>
+  <p class="text-muted text-sm" style="margin-bottom:14px;">
+    Enregistrez votre estimation pour ce véhicule
+    (<strong>{{ form.marque }} {{ form.modele }}{% if form.annee %}, {{ form.annee }}{% endif %}</strong>).
+    Elle sera proposée (badge « Utilisateur ») lors des prochaines évaluations de ce modèle.
+    Elle n'entre pas dans le calcul du prix médian.
+  </p>
+  <form method="post" action="/vtt/estimation">
+    <input type="hidden" name="type_unite" value="{{ type_actif }}" />
+    <input type="hidden" name="marque" value="{{ form.marque }}" />
+    <input type="hidden" name="modele" value="{{ form.modele }}" />
+    <input type="hidden" name="annee" value="{{ form.annee }}" />
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label class="form-label">Votre estimation (valeur marchande, $)</label>
+        <input class="form-control" type="text" name="valeur_estimee" inputmode="numeric"
+               placeholder="ex : 14 500" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note <span class="text-muted" style="font-weight:400;">— optionnel</span></label>
+        <input class="form-control" type="text" name="note" placeholder="ex : bon état, options ajoutées..." />
+      </div>
+    </div>
+    <button type="submit" class="btn-primary"><i class="fa fa-floppy-disk"></i> Enregistrer mon estimation</button>
+  </form>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function choisirType(el) {
+  document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('type_unite').value = el.dataset.type;
+}
+document.querySelectorAll('.suggestion-chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const form = document.getElementById('eval-form');
+    form.marque.value = btn.dataset.marque || '';
+    form.modele.value = btn.dataset.modele || '';
+    form.submit();
+  });
+});
+</script>
+{% endblock %}
