@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Les Geeks du VR", lifespan=lifespan)
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, max_age=86400)
+app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, max_age=60 * 60 * 24 * 30)  # 30 jours
 
 os.makedirs("data/assets", exist_ok=True)
 os.makedirs("data/uploads", exist_ok=True)
