@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Iterable, Optional
+import re
 import statistics
 import unicodedata
 
@@ -163,27 +164,58 @@ def calcul_stats(listings: Iterable, inclure_bricoleur: bool = False) -> StatsMa
 # --------------------------------------------------------------------------- #
 
 # Niveaux de correspondance (0 = meilleur)
-NIVEAU_MODELE = 0
-NIVEAU_LIGNE = 1
-NIVEAU_GABARIT = 2
+NIVEAU_MODELE   = 0
+NIVEAU_LIGNE    = 1
+NIVEAU_MARQUE   = 2   # même marque + longueur proche
+NIVEAU_GABARIT  = 3   # autre marque + longueur proche
 
 LIBELLE_NIVEAU = {
-    NIVEAU_MODELE: "Même modèle",
-    NIVEAU_LIGNE: "Même ligne",
+    NIVEAU_MODELE:  "Même modèle",
+    NIVEAU_LIGNE:   "Même ligne",
+    NIVEAU_MARQUE:  "Même marque, gabarit similaire",
     NIVEAU_GABARIT: "Gabarit similaire",
 }
 
 
-def _niveau_correspondance(listing, modele, ligne, longueur_pi, tolerance_longueur) -> Optional[int]:
+def _extraire_longueur_modele(modele: str) -> Optional[float]:
+    """Extrait la longueur approximative en pieds depuis un numéro de modèle VR.
+
+    Exemples :
+      "264BH"  → 26.4 pi   (3 chiffres : 26 pi + 4/10)
+      "232RB"  → 23.2 pi
+      "2205S"  → 22.0 pi   (4 chiffres : prend les 2 premiers)
+      "30RK"   → 30.0 pi   (2 chiffres)
+      "17BH"   → 17.0 pi
+    """
+    if not modele:
+        return None
+    m = re.match(r'^(\d{2,4})', modele.strip())
+    if not m:
+        return None
+    digits = m.group(1)
+    if len(digits) == 2:
+        return float(digits)
+    if len(digits) == 3:
+        # "264" → 26 + 0.4
+        return float(digits[:2]) + float(digits[2]) / 10
+    # 4 chiffres : les deux premiers = pieds (ex. 2205 → 22)
+    return float(digits[:2])
+
+
+def _niveau_correspondance(listing, modele, ligne, longueur_pi, tolerance_longueur,
+                           marque=None) -> Optional[int]:
     """Détermine à quel niveau de priorité une annonce correspond, ou None."""
     if modele and _norm(_get(listing, "modele")) == _norm(modele):
         return NIVEAU_MODELE
     if ligne and _norm(_get(listing, "ligne")) == _norm(ligne):
         return NIVEAU_LIGNE
-    # Gabarit similaire : longueur proche (le type_unite est déjà filtré en amont)
+    # Gabarit similaire : longueur proche
     lp = _get(listing, "longueur_pi")
     if longueur_pi is not None and lp is not None:
         if abs(lp - longueur_pi) <= tolerance_longueur:
+            # Même marque = priorité supérieure
+            if marque and _norm(_get(listing, "marque")) == _norm(marque):
+                return NIVEAU_MARQUE
             return NIVEAU_GABARIT
     return None
 
@@ -192,6 +224,7 @@ def selectionner_comparables(
     listings: Iterable,
     *,
     type_unite: Optional[str] = None,
+    marque: Optional[str] = None,
     modele: Optional[str] = None,
     ligne: Optional[str] = None,
     annee: Optional[int] = None,
@@ -220,7 +253,7 @@ def selectionner_comparables(
     #    ET dans la fenêtre d'années demandée (filtre STRICT : hors fenêtre = exclu).
     candidats = []
     for l in pool:
-        niveau = _niveau_correspondance(l, modele, ligne, longueur_pi, tolerance_longueur)
+        niveau = _niveau_correspondance(l, modele, ligne, longueur_pi, tolerance_longueur, marque)
         if niveau is None:
             continue
         la = _get(l, "annee")
@@ -258,6 +291,12 @@ def longueur_cible(listings: Iterable, *, type_unite: Optional[str] = None,
         ]
         if longueurs:
             return statistics.median(longueurs)
+    # Dernier recours : extraire la longueur depuis le numéro de modèle
+    # ex. "264BH" → 26.4 pi, "232RB" → 23.2 pi
+    if modele:
+        lg = _extraire_longueur_modele(modele)
+        if lg:
+            return lg
     return None
 
 
@@ -404,6 +443,7 @@ def evaluer(
     tous = selectionner_comparables(
         listings,
         type_unite=type_unite,
+        marque=marque,
         modele=modele,
         ligne=ligne,
         annee=annee,

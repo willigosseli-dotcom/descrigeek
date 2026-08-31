@@ -113,6 +113,7 @@ async def _run_evaluation(request, user, db, type_unite, marque, ligne, modele, 
         niveau = engine._niveau_correspondance(
             c, modele.strip() or None, ligne.strip() or None,
             resultat.get("longueur_cible"), settings.tolerance_longueur_pi,
+            marque=marque.strip() or None,
         )
         comparables_affichage.append({
             "l": c,
