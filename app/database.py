@@ -4,18 +4,27 @@ from app.models import Base, User
 import os
 import bcrypt
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/descrigeek.db")
+_raw_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/descrigeek.db")
 
-# PostgreSQL en production (Railway) : pool + SSL requis par Supabase
+# Railway fournit parfois "postgres://" au lieu de "postgresql+asyncpg://"
+if _raw_url.startswith("postgres://"):
+    _raw_url = _raw_url.replace("postgres://", "postgresql+asyncpg://", 1)
+elif _raw_url.startswith("postgresql://"):
+    _raw_url = _raw_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+DATABASE_URL = _raw_url
 _is_postgres = DATABASE_URL.startswith("postgresql")
+
 _engine_kwargs = {"echo": False}
 _connect_args = {}
 if _is_postgres:
     _engine_kwargs["pool_size"] = 5
     _engine_kwargs["max_overflow"] = 10
     _engine_kwargs["pool_pre_ping"] = True
-    # Supabase impose SSL — asyncpg accepte ssl=True (pas la chaîne "require")
     _connect_args = {"ssl": True}
+    print(f"[DB] PostgreSQL connecté : {DATABASE_URL[:50]}...")
+else:
+    print(f"[DB] SQLite local : {DATABASE_URL}")
 
 engine = create_async_engine(DATABASE_URL, connect_args=_connect_args, **_engine_kwargs)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
@@ -29,7 +38,6 @@ async def get_db():
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        # Ajouter les colonnes manquantes sans casser les données existantes
         if _is_postgres:
             from sqlalchemy import text
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(500);"))
