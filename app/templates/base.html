@@ -46,15 +46,17 @@
       <div id="header-avatar-wrap" style="position:relative;width:34px;height:34px;flex-shrink:0;">
         <div id="header-avatar-initials"
              style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.25);
-                    border:2px solid rgba(255,255,255,0.5);display:flex;align-items:center;
+                    border:2px solid rgba(255,255,255,0.5);display:{% if user.avatar_url %}none{% else %}flex{% endif %};align-items:center;
                     justify-content:center;font-weight:700;font-size:.85rem;color:#fff;
                     position:absolute;top:0;left:0;">
           {{ (user.full_name or user.username)[:2]|upper }}
         </div>
-        <img id="header-avatar" class="header-avatar-img" src="" alt="{{ user.full_name or user.username }}"
+        <img id="header-avatar" class="header-avatar-img"
+             src="{{ user.avatar_url or '' }}" alt="{{ user.full_name or user.username }}"
              style="width:34px;height:34px;border-radius:50%;object-fit:cover;
                     border:2px solid rgba(255,255,255,0.5);position:absolute;top:0;left:0;
-                    display:none;">
+                    display:{% if user.avatar_url %}block{% else %}none{% endif %};"
+             onerror="this.style.display='none';document.getElementById('header-avatar-initials').style.display='flex';">
       </div>
       {% if user.role == 'admin' %}<span class="badge-admin">Admin</span>{% endif %}
     </a>
@@ -195,42 +197,13 @@ window.CHAT_USER = {
 <script src="/static/js/avatarService.js?v=2"></script>
 <script src="/static/js/chatService.js?v=2"></script>
 <script>
-// Initialiser l'avatar du header
-(function() {
-  if (!window.CHAT_USER) return;
-  const img      = document.getElementById('header-avatar');
-  const initials = document.getElementById('header-avatar-initials');
-
-  function montrerPhoto() {
-    if (img) img.style.display = 'block';
-    if (initials) initials.style.display = 'none';
-  }
-  function montrerInitiales() {
-    if (img) img.style.display = 'none';
-    if (initials) initials.style.display = 'flex';
-  }
-
-  if (img && window._SUPABASE_URL) {
-    const url = window._SUPABASE_URL + '/storage/v1/object/public/avatars/'
-              + encodeURIComponent(window.CHAT_USER.username) + '.jpg';
-    img.onload  = montrerPhoto;
-    img.onerror = montrerInitiales;
-    img.src = url;
-    // Si déjà en cache, onload peut ne pas refirer — vérifier manuellement
-    if (img.complete && img.naturalWidth > 0) montrerPhoto();
-  }
-
-  // Service pour les mises à jour en temps réel (upload nouvelle photo)
-  if (window.AvatarService) {
-    const svc = window._avatarSvc = new AvatarService();
-    svc.onUpdate((username, dataUrl) => {
-      if (username === window.CHAT_USER.username && dataUrl && img) {
-        img.src = dataUrl;
-        montrerPhoto();
-      }
-    });
-  }
-})();
+// Mise à jour avatar header après upload sur cette page
+window._updateHeaderAvatar = function(url) {
+  const img = document.getElementById('header-avatar');
+  const ini = document.getElementById('header-avatar-initials');
+  if (img) { img.src = url; img.style.display = 'block'; }
+  if (ini) ini.style.display = 'none';
+};
 </script>
 {% endif %}
 

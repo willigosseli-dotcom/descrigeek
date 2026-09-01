@@ -17,6 +17,8 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    avatar_url = Column(String(500), nullable=True)
+
     # Préférences d'affichage
     text_size = Column(String(20), default="normal")  # tiny, normal, large, xlarge
     color_theme = Column(String(20), default="vr-thetford")

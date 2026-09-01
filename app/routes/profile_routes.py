@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Request, Depends, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Request, Depends, Form, UploadFile, File
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.auth import require_login, hash_password
@@ -40,3 +40,27 @@ async def save_profile(
     await db.commit()
     request.session["profile_saved"] = True
     return RedirectResponse("/profile", status_code=303)
+
+
+@router.post("/profile/avatar")
+async def upload_avatar_endpoint(
+    request: Request,
+    file: UploadFile = File(...),
+    user=Depends(require_login),
+    db: AsyncSession = Depends(get_db),
+):
+    from sqlalchemy import select
+    from app.models import User
+    from app.services.supabase_client import upload_avatar
+
+    image_bytes = await file.read()
+    content_type = file.content_type or "image/jpeg"
+    url = upload_avatar(user.username, image_bytes, content_type)
+    if not url:
+        return JSONResponse({"error": "Échec de l'upload vers Supabase"}, status_code=500)
+
+    result = await db.execute(select(User).where(User.id == user.id))
+    u = result.scalar_one()
+    u.avatar_url = url
+    await db.commit()
+    return JSONResponse({"url": url})

@@ -35,6 +35,24 @@ def get_supabase():
         return None
 
 
+def upload_avatar(username: str, image_bytes: bytes, content_type: str = "image/jpeg") -> Optional[str]:
+    """Upload un avatar dans Supabase Storage et retourne l'URL publique."""
+    service_key = os.getenv("SUPABASE_SERVICE_KEY", SUPABASE_KEY)
+    try:
+        from supabase import create_client
+        sb = create_client(SUPABASE_URL, service_key)
+        path = f"{username}.jpg"
+        sb.storage.from_("avatars").upload(
+            path=path,
+            file=image_bytes,
+            file_options={"content-type": content_type, "upsert": "true"},
+        )
+        return f"{SUPABASE_URL}/storage/v1/object/public/avatars/{path}"
+    except Exception as e:
+        print(f"[Supabase] Erreur upload_avatar : {e}")
+        return None
+
+
 async def notify_new_description(
     desc_id: int,
     username: str,

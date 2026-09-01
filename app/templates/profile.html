@@ -11,14 +11,16 @@
 <div class="alert alert-success"><i class="fa fa-circle-check"></i> Réglages enregistrés avec succès.</div>
 {% endif %}
 
-<!-- Photo de profil (stockée localement, pas de serveur requis) -->
+<!-- Photo de profil -->
 <div class="card" style="margin-bottom:20px;">
   <div class="card-title"><i class="fa fa-camera"></i> Photo de profil</div>
   <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
     <div style="position:relative;flex-shrink:0;">
-      <img id="avatar-preview" src="" alt="Avatar"
+      <img id="avatar-preview"
+           src="{{ user.avatar_url or '' }}" alt="Avatar"
            style="width:100px;height:100px;border-radius:50%;object-fit:cover;
-                  border:3px solid var(--accent);background:#e2e8f0;display:block;">
+                  border:3px solid var(--accent);background:#e2e8f0;display:block;"
+           onerror="this.src='';">
       <label for="avatar-file-input"
              style="position:absolute;bottom:0;right:0;width:30px;height:30px;
                     background:var(--accent);border-radius:50%;display:flex;
@@ -27,17 +29,13 @@
              title="Changer la photo">
         <i class="fa fa-pen"></i>
       </label>
-      <input type="file" id="avatar-file-input" accept="image/*"
-             style="display:none;" />
+      <input type="file" id="avatar-file-input" accept="image/*" style="display:none;" />
     </div>
     <div>
       <p style="font-size:0.88rem;margin-bottom:10px;color:var(--text-muted);">
-        La photo est stockée localement et partagée avec le chat.<br>
         Formats acceptés : JPG, PNG, WebP. Taille max recommandée : 5 Mo.
       </p>
-      <button type="button" id="avatar-remove-btn" class="btn-secondary btn-sm">
-        <i class="fa fa-trash"></i> Supprimer la photo
-      </button>
+      <span id="avatar-status" style="font-size:0.85rem;color:var(--text-muted);"></span>
     </div>
   </div>
 </div>
@@ -117,55 +115,32 @@
 
 {% block scripts %}
 <script>
-// ─── Avatar upload (profile page) ───────────────────────────────────────────
+// ─── Avatar upload (serveur) ─────────────────────────────────────────────────
 (function() {
-  if (!window.AvatarService || !window.CHAT_USER) return;
-  const svc      = new AvatarService();
-  const preview  = document.getElementById('avatar-preview');
   const fileInput = document.getElementById('avatar-file-input');
-  const removeBtn = document.getElementById('avatar-remove-btn');
-  const username  = window.CHAT_USER.username;
-
-  // Afficher l'avatar actuel
-  preview.src = svc.getAvatar(username);
+  const preview   = document.getElementById('avatar-preview');
+  const status    = document.getElementById('avatar-status');
 
   fileInput.addEventListener('change', async () => {
     const file = fileInput.files[0];
     if (!file) return;
-    showToast('Envoi en cours…');
+    status.textContent = 'Envoi en cours…';
+    const fd = new FormData();
+    fd.append('file', file);
     try {
-      const dataUrl = await svc.processFile(file, 200);
-      preview.src = dataUrl;
-      await svc.setAvatar(username, dataUrl);
-      // Mettre à jour l'avatar dans le header sans rechargement
-      const hdr = document.getElementById('header-avatar');
-      if (hdr) { hdr.src = dataUrl; hdr.style.display = 'block'; }
-      const ini = document.getElementById('header-avatar-initials');
-      if (ini) ini.style.display = 'none';
-      showToast('Photo enregistrée !');
+      const resp = await fetch('/profile/avatar', { method: 'POST', body: fd });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || resp.statusText);
+      preview.src = data.url;
+      if (window._updateHeaderAvatar) window._updateHeaderAvatar(data.url);
+      status.textContent = 'Photo enregistrée ✓';
+      setTimeout(() => status.textContent = '', 3000);
     } catch(e) {
-      console.error('[Avatar] Erreur upload :', e);
-      showToast('Erreur lors de l\'enregistrement : ' + (e.message || e), true);
+      status.textContent = 'Erreur : ' + (e.message || e);
+      console.error('[Avatar]', e);
     }
     fileInput.value = '';
   });
-
-  removeBtn.addEventListener('click', () => {
-    const def = svc.getDefault(username);
-    svc.setAvatar(username, def);
-    preview.src = def;
-    document.querySelectorAll('.header-avatar-img').forEach(img => img.src = def);
-    showToast('Photo supprimée.');
-  });
-
-  function showToast(msg, error) {
-    const t = document.createElement('div');
-    t.className = 'alert ' + (error ? 'alert-warning' : 'alert-success');
-    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;animation:chat-drop 0.2s ease;';
-    t.innerHTML = `<i class="fa fa-${error?'triangle-exclamation':'circle-check'}"></i> ${msg}`;
-    document.body.appendChild(t);
-    setTimeout(() => t.remove(), 3000);
-  }
 })();
 
 function selectSize(val) {
