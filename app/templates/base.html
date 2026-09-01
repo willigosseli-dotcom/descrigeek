@@ -197,29 +197,36 @@ window.CHAT_USER = {
 // Initialiser l'avatar du header
 (function() {
   if (!window.CHAT_USER) return;
-  const img = document.getElementById('header-avatar');
+  const img      = document.getElementById('header-avatar');
   const initials = document.getElementById('header-avatar-initials');
 
-  function afficherPhoto(src) {
-    if (!src || !img) return;
-    img.src = src;
-    img.style.display = 'block';
+  function montrerPhoto() {
+    if (img) img.style.display = 'block';
     if (initials) initials.style.display = 'none';
   }
-
-  // Charger directement depuis Supabase Storage (URL fixe, pas d'attente async)
-  if (window._SUPABASE_URL) {
-    const url = window._SUPABASE_URL + '/storage/v1/object/public/avatars/' + window.CHAT_USER.username + '.jpg';
-    const test = new Image();
-    test.onload = () => afficherPhoto(url);
-    test.src = url;
+  function montrerInitiales() {
+    if (img) img.style.display = 'none';
+    if (initials) initials.style.display = 'flex';
   }
 
-  // Initialiser le service pour le chat et les mises à jour en temps réel
+  if (img && window._SUPABASE_URL) {
+    const url = window._SUPABASE_URL + '/storage/v1/object/public/avatars/'
+              + encodeURIComponent(window.CHAT_USER.username) + '.jpg';
+    img.onload  = montrerPhoto;
+    img.onerror = montrerInitiales;
+    img.src = url;
+    // Si déjà en cache, onload peut ne pas refirer — vérifier manuellement
+    if (img.complete && img.naturalWidth > 0) montrerPhoto();
+  }
+
+  // Service pour les mises à jour en temps réel (upload nouvelle photo)
   if (window.AvatarService) {
     const svc = window._avatarSvc = new AvatarService();
     svc.onUpdate((username, dataUrl) => {
-      if (username === window.CHAT_USER.username) afficherPhoto(dataUrl);
+      if (username === window.CHAT_USER.username && dataUrl && img) {
+        img.src = dataUrl;
+        montrerPhoto();
+      }
     });
   }
 })();
