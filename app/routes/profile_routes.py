@@ -49,18 +49,20 @@ async def upload_avatar_endpoint(
     user=Depends(require_login),
     db: AsyncSession = Depends(get_db),
 ):
+    import base64
     from sqlalchemy import select
     from app.models import User
-    from app.services.supabase_client import upload_avatar
 
     image_bytes = await file.read()
+    if len(image_bytes) > 5 * 1024 * 1024:
+        return JSONResponse({"error": "Fichier trop volumineux (max 5 Mo)"}, status_code=400)
+
     content_type = file.content_type or "image/jpeg"
-    url = upload_avatar(user.username, image_bytes, content_type)
-    if not url:
-        return JSONResponse({"error": "Échec de l'upload vers Supabase"}, status_code=500)
+    b64 = base64.b64encode(image_bytes).decode()
+    data_url = f"data:{content_type};base64,{b64}"
 
     result = await db.execute(select(User).where(User.id == user.id))
     u = result.scalar_one()
-    u.avatar_url = url
+    u.avatar_data = data_url
     await db.commit()
-    return JSONResponse({"url": url})
+    return JSONResponse({"url": data_url})

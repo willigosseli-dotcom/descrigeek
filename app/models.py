@@ -18,6 +18,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     avatar_url = Column(String(500), nullable=True)
+    avatar_data = Column(Text, nullable=True)  # data URL base64 (fallback local)
 
     # Préférences d'affichage
     text_size = Column(String(20), default="normal")  # tiny, normal, large, xlarge

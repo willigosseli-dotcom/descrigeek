@@ -31,9 +31,9 @@ async def init_db():
         await conn.run_sync(Base.metadata.create_all)
         # Ajouter les colonnes manquantes sans casser les données existantes
         if _is_postgres:
-            await conn.execute(__import__("sqlalchemy").text(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(500);"
-            ))
+            from sqlalchemy import text
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(500);"))
+            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_data TEXT;"))
     await create_default_admin()
 
 

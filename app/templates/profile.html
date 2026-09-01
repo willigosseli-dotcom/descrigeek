@@ -17,7 +17,7 @@
   <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
     <div style="position:relative;flex-shrink:0;">
       <img id="avatar-preview"
-           src="{{ user.avatar_url or '' }}" alt="Avatar"
+           src="{{ user.avatar_data or '' }}" alt="Avatar"
            style="width:100px;height:100px;border-radius:50%;object-fit:cover;
                   border:3px solid var(--accent);background:#e2e8f0;display:block;"
            onerror="this.src='';">
