@@ -196,8 +196,7 @@ window.CHAT_USER = {
 <script>
 // Initialiser l'avatar du header
 (function() {
-  if (!window.AvatarService || !window.CHAT_USER) return;
-  const svc = window._avatarSvc = new AvatarService();
+  if (!window.CHAT_USER) return;
   const img = document.getElementById('header-avatar');
   const initials = document.getElementById('header-avatar-initials');
 
@@ -208,12 +207,21 @@ window.CHAT_USER = {
     if (initials) initials.style.display = 'none';
   }
 
-  const src = svc.getAvatar(window.CHAT_USER.username);
-  if (src) afficherPhoto(src);
+  // Charger directement depuis Supabase Storage (URL fixe, pas d'attente async)
+  if (window._SUPABASE_URL) {
+    const url = window._SUPABASE_URL + '/storage/v1/object/public/avatars/' + window.CHAT_USER.username + '.jpg';
+    const test = new Image();
+    test.onload = () => afficherPhoto(url);
+    test.src = url;
+  }
 
-  svc.onUpdate((username, dataUrl) => {
-    if (username === window.CHAT_USER.username) afficherPhoto(dataUrl);
-  });
+  // Initialiser le service pour le chat et les mises à jour en temps réel
+  if (window.AvatarService) {
+    const svc = window._avatarSvc = new AvatarService();
+    svc.onUpdate((username, dataUrl) => {
+      if (username === window.CHAT_USER.username) afficherPhoto(dataUrl);
+    });
+  }
 })();
 </script>
 {% endif %}
