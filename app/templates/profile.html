@@ -132,15 +132,20 @@
   fileInput.addEventListener('change', async () => {
     const file = fileInput.files[0];
     if (!file) return;
+    showToast('Envoi en cours…');
     try {
       const dataUrl = await svc.processFile(file, 200);
-      svc.setAvatar(username, dataUrl);
       preview.src = dataUrl;
+      await svc.setAvatar(username, dataUrl);
       // Mettre à jour l'avatar dans le header sans rechargement
-      document.querySelectorAll('.header-avatar-img').forEach(img => img.src = dataUrl);
+      const hdr = document.getElementById('header-avatar');
+      if (hdr) { hdr.src = dataUrl; hdr.style.display = 'block'; }
+      const ini = document.getElementById('header-avatar-initials');
+      if (ini) ini.style.display = 'none';
       showToast('Photo enregistrée !');
     } catch(e) {
-      showToast('Erreur lors du traitement de l\'image.', true);
+      console.error('[Avatar] Erreur upload :', e);
+      showToast('Erreur lors de l\'enregistrement : ' + (e.message || e), true);
     }
     fileInput.value = '';
   });
