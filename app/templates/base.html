@@ -41,19 +41,28 @@
     </a>
   </div>
   <div class="header-right">
-    <span class="header-user">
-      <img id="header-avatar" class="header-avatar-img" src="" alt=""
-           style="width:30px;height:30px;border-radius:50%;object-fit:cover;
-                  border:2px solid rgba(255,255,255,0.4);flex-shrink:0;">
-      {{ user.full_name or user.username }}
+    <a href="/profile" class="header-user" title="{{ user.full_name or user.username }}" style="text-decoration:none;">
+      <div id="header-avatar-wrap" style="position:relative;width:34px;height:34px;flex-shrink:0;">
+        <div id="header-avatar-initials"
+             style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.25);
+                    border:2px solid rgba(255,255,255,0.5);display:flex;align-items:center;
+                    justify-content:center;font-weight:700;font-size:.85rem;color:#fff;
+                    position:absolute;top:0;left:0;">
+          {{ (user.full_name or user.username)[:2]|upper }}
+        </div>
+        <img id="header-avatar" class="header-avatar-img" src="" alt="{{ user.full_name or user.username }}"
+             style="width:34px;height:34px;border-radius:50%;object-fit:cover;
+                    border:2px solid rgba(255,255,255,0.5);position:absolute;top:0;left:0;
+                    display:none;">
+      </div>
       {% if user.role == 'admin' %}<span class="badge-admin">Admin</span>{% endif %}
-    </span>
+    </a>
     <!-- Bulle de chat -->
     <button id="chat-toggle-btn" class="header-icon-btn chat-toggle-btn" title="Chat d'équipe">
       <i class="fa fa-comments"></i>
       <span id="chat-badge" class="chat-badge" style="display:none;">0</span>
     </button>
-    <a href="/profile" class="header-icon-btn" title="Réglages personnels"><i class="fa fa-gear"></i></a>
+    <a href="/profile" class="header-icon-btn" title="Réglages personnels" style="font-size:.85rem;"><i class="fa fa-gear"></i></a>
     <a href="/logout" class="header-icon-btn" title="Se déconnecter"><i class="fa fa-right-from-bracket"></i></a>
   </div>
 
@@ -190,9 +199,20 @@ window.CHAT_USER = {
   if (!window.AvatarService || !window.CHAT_USER) return;
   const svc = window._avatarSvc = new AvatarService();
   const img = document.getElementById('header-avatar');
-  if (img) img.src = svc.getAvatar(window.CHAT_USER.username);
+  const initials = document.getElementById('header-avatar-initials');
+
+  function afficherPhoto(src) {
+    if (!src || !img) return;
+    img.src = src;
+    img.style.display = 'block';
+    if (initials) initials.style.display = 'none';
+  }
+
+  const src = svc.getAvatar(window.CHAT_USER.username);
+  if (src) afficherPhoto(src);
+
   svc.onUpdate((username, dataUrl) => {
-    if (username === window.CHAT_USER.username && img) img.src = dataUrl;
+    if (username === window.CHAT_USER.username) afficherPhoto(dataUrl);
   });
 })();
 </script>
