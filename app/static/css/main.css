@@ -1,3 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Russo+One&display=swap');
+
+.logo-geeks {
+  font-family: 'Russo One', sans-serif;
+  font-size: 1.6rem;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
+}
+.logo-geeks .l1 { color: #ffffff; }
+.logo-geeks .l2 { color: #9fd7f5; font-size: 1rem; margin: 0 3px; }
+.logo-geeks .l3 { color: #FFD23F; }
+
+.logo-geeks-light .l1 { color: #0f2044; }
+.logo-geeks-light .l2 { color: #6b7280; font-size: 1rem; margin: 0 3px; }
+.logo-geeks-light .l3 { color: #1B9DE0; }
+
 /* ===== VARIABLES & RESET ===== */
 :root {
   --accent: #1B9DE0;
