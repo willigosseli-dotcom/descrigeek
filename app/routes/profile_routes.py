@@ -42,6 +42,25 @@ async def save_profile(
     return RedirectResponse("/profile", status_code=303)
 
 
+@router.get("/profile/debug")
+async def debug_avatar(request: Request, user=Depends(require_login), db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import text
+    from app.database import _is_postgres, DATABASE_URL
+    try:
+        result = await db.execute(text("SELECT avatar_data IS NOT NULL as has_avatar FROM users WHERE id = :id"), {"id": user.id})
+        row = result.fetchone()
+        has_avatar = row[0] if row else None
+    except Exception as e:
+        has_avatar = f"ERREUR: {e}"
+    return JSONResponse({
+        "db_type": "postgresql" if _is_postgres else "sqlite",
+        "db_url_prefix": DATABASE_URL[:40],
+        "user_id": user.id,
+        "username": user.username,
+        "has_avatar_data": has_avatar,
+    })
+
+
 @router.post("/profile/avatar")
 async def upload_avatar_endpoint(
     request: Request,
@@ -50,19 +69,26 @@ async def upload_avatar_endpoint(
     db: AsyncSession = Depends(get_db),
 ):
     import base64
-    from sqlalchemy import select
+    from sqlalchemy import select, text
     from app.models import User
 
-    image_bytes = await file.read()
-    if len(image_bytes) > 5 * 1024 * 1024:
-        return JSONResponse({"error": "Fichier trop volumineux (max 5 Mo)"}, status_code=400)
+    try:
+        image_bytes = await file.read()
+        if len(image_bytes) > 5 * 1024 * 1024:
+            return JSONResponse({"error": "Fichier trop volumineux (max 5 Mo)"}, status_code=400)
 
-    content_type = file.content_type or "image/jpeg"
-    b64 = base64.b64encode(image_bytes).decode()
-    data_url = f"data:{content_type};base64,{b64}"
+        content_type = file.content_type or "image/jpeg"
+        b64 = base64.b64encode(image_bytes).decode()
+        data_url = f"data:{content_type};base64,{b64}"
 
-    result = await db.execute(select(User).where(User.id == user.id))
-    u = result.scalar_one()
-    u.avatar_data = data_url
-    await db.commit()
-    return JSONResponse({"url": data_url})
+        # Mise à jour directe par SQL pour éviter tout problème de cache ORM
+        await db.execute(
+            text("UPDATE users SET avatar_data = :data WHERE id = :id"),
+            {"data": data_url, "id": user.id}
+        )
+        await db.commit()
+        print(f"[Avatar] Sauvegardé pour {user.username} ({len(data_url)} chars)")
+        return JSONResponse({"url": data_url})
+    except Exception as e:
+        print(f"[Avatar] ERREUR : {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
