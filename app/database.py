@@ -29,6 +29,11 @@ async def get_db():
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Ajouter les colonnes manquantes sans casser les données existantes
+        if _is_postgres:
+            await conn.execute(__import__("sqlalchemy").text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(500);"
+            ))
     await create_default_admin()
 
 
