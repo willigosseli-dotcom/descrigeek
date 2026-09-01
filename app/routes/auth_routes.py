@@ -34,6 +34,7 @@ async def login(
     username: str = Form(...),
     password: str = Form(...),
     app_password: str = Form(""),
+    remember_me: str = Form(""),
     db: AsyncSession = Depends(get_db),
 ):
     # 1. Mot de passe général de l'app (partagé, changé de temps en temps)
@@ -50,8 +51,11 @@ async def login(
         request.session["login_error"] = "Nom d'utilisateur ou mot de passe incorrect."
         return RedirectResponse("/login", status_code=303)
 
+    import time
     request.session["user_id"] = user.id
     request.session["user_role"] = user.role
+    duree = 30 * 24 * 3600 if remember_me == "1" else 8 * 3600
+    request.session["expires_at"] = int(time.time()) + duree
     return RedirectResponse("/dashboard", status_code=303)
 
 

@@ -15,8 +15,13 @@ def verify_password(password: str, hashed: str) -> bool:
 
 
 async def get_current_user(request: Request, db: AsyncSession = Depends(get_db)):
+    import time
     user_id = request.session.get("user_id")
     if not user_id:
+        return None
+    expires_at = request.session.get("expires_at")
+    if expires_at and int(time.time()) > expires_at:
+        request.session.clear()
         return None
     result = await db.execute(select(User).where(User.id == user_id, User.is_active == True))
     return result.scalar_one_or_none()
