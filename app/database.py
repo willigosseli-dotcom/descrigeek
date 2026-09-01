@@ -14,8 +14,8 @@ if _is_postgres:
     _engine_kwargs["pool_size"] = 5
     _engine_kwargs["max_overflow"] = 10
     _engine_kwargs["pool_pre_ping"] = True
-    # Supabase impose SSL — asyncpg accepte ssl="require"
-    _connect_args = {"ssl": "require"}
+    # Supabase impose SSL — asyncpg accepte ssl=True (pas la chaîne "require")
+    _connect_args = {"ssl": True}
 
 engine = create_async_engine(DATABASE_URL, connect_args=_connect_args, **_engine_kwargs)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
