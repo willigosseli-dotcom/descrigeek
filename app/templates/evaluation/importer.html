@@ -85,7 +85,7 @@
   <div class="card-title"><i class="fa fa-clock-rotate-left"></i> Derniers imports</div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Date</th><th>Fichier</th><th>Importées</th><th>Disparues</th><th>Baisses</th></tr></thead>
+      <thead><tr><th>Date</th><th>Fichier</th><th>Importées</th><th>Disparues</th><th>Baisses</th><th></th></tr></thead>
       <tbody>
         {% for h in historique %}
         <tr>
@@ -94,6 +94,14 @@
           <td>{{ h.nb_importees }}</td>
           <td>{{ h.nb_disparues }}</td>
           <td>{{ h.nb_baisses }}</td>
+          <td>
+            <form method="post" action="/importer/supprimer/{{ h.id }}"
+                  onsubmit="return confirm('Supprimer cet import de l\'historique ?');" style="margin:0;">
+              <button type="submit" class="btn-icon" title="Supprimer" style="color:#d21f26;background:none;border:none;cursor:pointer;padding:2px 6px;">
+                <i class="fa fa-trash"></i>
+              </button>
+            </form>
+          </td>
         </tr>
         {% endfor %}
       </tbody>

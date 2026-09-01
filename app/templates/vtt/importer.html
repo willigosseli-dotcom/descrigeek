@@ -66,7 +66,7 @@
   <div class="card-title"><i class="fa fa-clock-rotate-left"></i> Derniers imports</div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Date</th><th>Fichier</th><th>Lues</th><th>Nouvelles</th><th>Mises à jour</th></tr></thead>
+      <thead><tr><th>Date</th><th>Fichier</th><th>Lues</th><th>Nouvelles</th><th>Mises à jour</th><th></th></tr></thead>
       <tbody>
         {% for h in historique %}
         <tr>
@@ -75,6 +75,14 @@
           <td>{{ h.nb_lignes_csv }}</td>
           <td style="color:#2e9e4f; font-weight:700;">{{ h.nb_creees }}</td>
           <td style="color:#1470b0; font-weight:700;">{{ h.nb_maj }}</td>
+          <td>
+            <form method="post" action="/vtt/importer/supprimer/{{ h.id }}"
+                  onsubmit="return confirm('Supprimer cet import de l\'historique ?');" style="margin:0;">
+              <button type="submit" title="Supprimer" style="color:#d21f26;background:none;border:none;cursor:pointer;padding:2px 6px;">
+                <i class="fa fa-trash"></i>
+              </button>
+            </form>
+          </td>
         </tr>
         {% endfor %}
       </tbody>

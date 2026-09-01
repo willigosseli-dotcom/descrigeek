@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from datetime import datetime
 
 from fastapi import APIRouter, Request, Depends, Form, UploadFile, File
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -231,6 +231,15 @@ async def page_vtt_importer(request: Request, user=Depends(require_admin),
         "request": request, "user": user,
         "historique": historique, "nb_total": nb_total,
     })
+
+
+@router.post("/vtt/importer/supprimer/{batch_id}")
+async def supprimer_vtt_import_batch(batch_id: int, request: Request,
+                                     user=Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import text
+    await db.execute(text("DELETE FROM vtt_import_batches WHERE id = :id"), {"id": batch_id})
+    await db.commit()
+    return RedirectResponse("/vtt/importer", status_code=303)
 
 
 @router.post("/vtt/importer", response_class=HTMLResponse)
