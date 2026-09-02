@@ -36,18 +36,23 @@ async def login(
     remember_me: str = Form(""),
     db: AsyncSession = Depends(get_db),
 ):
-    # 1. Mot de passe général de l'app (partagé, changé de temps en temps)
-    if not await app_config.verify_general_password(db, app_password):
-        request.session["login_error"] = "Mot de passe de l'application incorrect."
-        return RedirectResponse("/login", status_code=303)
+    try:
+        # 1. Mot de passe général de l'app (partagé, changé de temps en temps)
+        if not await app_config.verify_general_password(db, app_password):
+            request.session["login_error"] = "Mot de passe de l'application incorrect."
+            return RedirectResponse("/login", status_code=303)
 
-    # 2. Compte personnel
-    result = await db.execute(
-        select(User).where(User.username == username, User.is_active == True)  # noqa: E712
-    )
-    user = result.scalar_one_or_none()
-    if not user or not verify_password(password, user.hashed_password):
-        request.session["login_error"] = "Nom d'utilisateur ou mot de passe incorrect."
+        # 2. Compte personnel
+        result = await db.execute(
+            select(User).where(User.username == username, User.is_active == True)  # noqa: E712
+        )
+        user = result.scalar_one_or_none()
+        if not user or not verify_password(password, user.hashed_password):
+            request.session["login_error"] = "Nom d'utilisateur ou mot de passe incorrect."
+            return RedirectResponse("/login", status_code=303)
+    except Exception as e:
+        print(f"[LOGIN] Erreur DB lors de la connexion : {e}")
+        request.session["login_error"] = "Erreur de connexion à la base de données. Veuillez réessayer dans quelques instants."
         return RedirectResponse("/login", status_code=303)
 
     import time
