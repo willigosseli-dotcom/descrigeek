@@ -20,9 +20,8 @@ async def home(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request, db: AsyncSession = Depends(get_db)):
-    user = await get_current_user(request, db)
-    if user:
+async def login_page(request: Request):
+    if request.session.get("user_id"):
         return RedirectResponse("/dashboard", status_code=302)
     error = request.session.pop("login_error", None)
     return templates.TemplateResponse("login.html", {"request": request, "error": error})
