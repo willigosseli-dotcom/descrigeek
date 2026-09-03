@@ -21,7 +21,8 @@ if _is_postgres:
     _engine_kwargs["pool_size"] = 5
     _engine_kwargs["max_overflow"] = 10
     _engine_kwargs["pool_pre_ping"] = True
-    _connect_args = {"ssl": "require"}
+    # Pas de SSL sur le réseau interne Railway
+    _connect_args = {}
     print(f"[DB] PostgreSQL connecté : {DATABASE_URL[:50]}...")
 else:
     print(f"[DB] SQLite local : {DATABASE_URL}")
