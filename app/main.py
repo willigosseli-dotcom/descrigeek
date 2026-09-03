@@ -10,7 +10,7 @@ load_dotenv()
 
 from app.database import init_db
 from app.auth import NotAuthenticatedException, NotAuthorizedException
-from app.routes import auth_routes, dashboard_routes, admin_routes, profile_routes, examples_routes, evaluation_routes, vtt_routes
+from app.routes import auth_routes, dashboard_routes, admin_routes, profile_routes, evaluation_routes, vtt_routes
 
 
 @asynccontextmanager
@@ -34,7 +34,6 @@ app.include_router(auth_routes.router)
 app.include_router(dashboard_routes.router)
 app.include_router(admin_routes.router)
 app.include_router(profile_routes.router)
-app.include_router(examples_routes.router)
 app.include_router(evaluation_routes.router)
 app.include_router(vtt_routes.router)
 

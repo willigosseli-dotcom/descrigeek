@@ -4,94 +4,116 @@
 {% block content %}
 <div class="page-header">
   <h1 class="page-title">Bonjour, {{ user.full_name or user.username }}</h1>
-  <p class="page-subtitle">Bienvenue dans Les Geeks du VR — descriptions et évaluation de prix pour concessions de VR</p>
+  <p class="page-subtitle">Rapport de marché — 30 derniers jours</p>
 </div>
 
-<!-- Statistiques -->
+<!-- Statistiques d'annonces actives -->
 <div class="stats-grid">
   <div class="stat-card">
-    <div class="stat-icon blue"><i class="fa fa-file-lines"></i></div>
+    <div class="stat-icon blue"><i class="fa fa-campground"></i></div>
     <div>
-      <div class="stat-value">{{ stats.total }}</div>
-      <div class="stat-label">Description{{ 's' if stats.total != 1 }} au total</div>
+      <div class="stat-value">{{ nb_roulo | default(0) }}</div>
+      <div class="stat-label">Annonces roulottes actives</div>
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon orange"><i class="fa fa-pen-to-square"></i></div>
+    <div class="stat-icon green"><i class="fa fa-person-biking"></i></div>
     <div>
-      <div class="stat-value">{{ stats.draft }}</div>
-      <div class="stat-label">Brouillon{{ 's' if stats.draft != 1 }}</div>
+      <div class="stat-value">{{ nb_vtt | default(0) }}</div>
+      <div class="stat-label">Annonces VTT/côte-à-côte actives</div>
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon green"><i class="fa fa-circle-check"></i></div>
+    <div class="stat-icon orange"><i class="fa fa-magnifying-glass-chart"></i></div>
     <div>
-      <div class="stat-value">{{ stats.approved }}</div>
-      <div class="stat-label">Approuvée{{ 's' if stats.approved != 1 }}</div>
+      <div class="stat-value">{{ eval_roulo + eval_vtt }}</div>
+      <div class="stat-label">Évaluations ce mois-ci</div>
     </div>
   </div>
   <div class="stat-card">
-    <div class="stat-icon yellow"><i class="fa fa-globe"></i></div>
+    <div class="stat-icon yellow"><i class="fa fa-dollar-sign"></i></div>
     <div>
-      <div class="stat-value">{{ stats.published }}</div>
-      <div class="stat-label">Publiée{{ 's' if stats.published != 1 }}</div>
+      <div class="stat-value">
+        {% if prix_median_roulo %}{{ "{:,}".format(prix_median_roulo).replace(",", " ") }} ${% else %}—{% endif %}
+      </div>
+      <div class="stat-label">Prix médian moyen VR évalués</div>
     </div>
   </div>
 </div>
 
-<!-- Actions rapides -->
-<div class="card">
-  <div class="card-title"><i class="fa fa-bolt"></i> Actions rapides</div>
-  <div style="display:flex; gap:12px; flex-wrap:wrap;">
-    <a href="/generate" class="btn-primary">
-      <i class="fa fa-wand-magic-sparkles"></i> Nouvelle description
-    </a>
-    <a href="/history" class="btn-secondary">
-      <i class="fa fa-clock-rotate-left"></i> Voir l'historique
-    </a>
-    {% if user.role == 'admin' %}
-    <a href="/admin/examples" class="btn-secondary">
-      <i class="fa fa-book-open"></i> Gérer les exemples
-    </a>
-    {% endif %}
+<!-- Détail par catégorie -->
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+  <div class="card">
+    <div class="card-title"><i class="fa fa-campground"></i> Roulottes usagées</div>
+    <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+      <div style="display:flex; justify-content:space-between;">
+        <span class="text-muted">Évaluations (30 j)</span>
+        <strong>{{ eval_roulo }}</strong>
+      </div>
+      <div style="display:flex; justify-content:space-between;">
+        <span class="text-muted">Prix médian moyen</span>
+        <strong>{% if prix_median_roulo %}{{ "{:,}".format(prix_median_roulo).replace(",", " ") }} ${% else %}—{% endif %}</strong>
+      </div>
+      <div style="display:flex; justify-content:space-between;">
+        <span class="text-muted">Dernier import</span>
+        <strong>{% if dernier_import_roulo %}{{ dernier_import_roulo.strftime('%d %b %Y') }}{% else %}Aucun{% endif %}</strong>
+      </div>
+    </div>
+    <div style="margin-top:14px;">
+      <a href="/importer" class="btn-secondary" style="font-size:.85rem;"><i class="fa fa-file-import"></i> Importer données</a>
+      <a href="/evaluer" class="btn-primary" style="font-size:.85rem; margin-left:8px;"><i class="fa fa-tags"></i> Évaluer</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><i class="fa fa-person-biking"></i> VTT / Côte-à-côte</div>
+    <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px;">
+      <div style="display:flex; justify-content:space-between;">
+        <span class="text-muted">Évaluations (30 j)</span>
+        <strong>{{ eval_vtt }}</strong>
+      </div>
+      <div style="display:flex; justify-content:space-between;">
+        <span class="text-muted">Prix médian moyen</span>
+        <strong>{% if prix_median_vtt %}{{ "{:,}".format(prix_median_vtt).replace(",", " ") }} ${% else %}—{% endif %}</strong>
+      </div>
+      <div style="display:flex; justify-content:space-between;">
+        <span class="text-muted">Dernier import</span>
+        <strong>{% if dernier_import_vtt %}{{ dernier_import_vtt.strftime('%d %b %Y') }}{% else %}Aucun{% endif %}</strong>
+      </div>
+    </div>
+    <div style="margin-top:14px;">
+      <a href="/vtt/importer" class="btn-secondary" style="font-size:.85rem;"><i class="fa fa-file-import"></i> Importer données</a>
+      <a href="/vtt/evaluer" class="btn-primary" style="font-size:.85rem; margin-left:8px;"><i class="fa fa-tags"></i> Évaluer</a>
+    </div>
   </div>
 </div>
 
-<!-- Descriptions récentes -->
+<!-- Évaluations récentes du mois -->
 <div class="card">
-  <div class="card-title"><i class="fa fa-clock-rotate-left"></i> Descriptions récentes</div>
-  {% if recent %}
+  <div class="card-title"><i class="fa fa-clock-rotate-left"></i> Évaluations récentes — 30 derniers jours</div>
+  {% if recentes %}
   <div class="table-wrap">
     <table>
       <thead>
         <tr>
-          <th>No de stock</th>
+          <th>Type</th>
           <th>Véhicule</th>
-          <th>Auteur</th>
-          <th>Statut</th>
+          <th>Évaluateur</th>
+          <th>Prix médian</th>
+          <th>Comparables</th>
           <th>Date</th>
-          <th></th>
         </tr>
       </thead>
       <tbody>
-        {% for d in recent %}
+        {% for item in recentes %}
+        {% set e = item.obj %}
         <tr>
-          <td><strong>{{ d.stock_number }}</strong></td>
-          <td>{{ d.vehicle_year or '' }} {{ d.vehicle_make or '' }} {{ d.vehicle_model or '' }}</td>
-          <td class="text-muted text-sm">{{ d.author }}</td>
-          <td>
-            {% if d.status == 'draft' %}
-              <span class="badge badge-draft"><i class="fa fa-circle-half-stroke"></i> Brouillon</span>
-            {% elif d.status == 'approved' %}
-              <span class="badge badge-approved"><i class="fa fa-circle-check"></i> Approuvée</span>
-            {% else %}
-              <span class="badge badge-published"><i class="fa fa-globe"></i> Publiée</span>
-            {% endif %}
-          </td>
-          <td class="text-muted text-sm">{{ d.created_at.strftime('%d %b %Y') }}</td>
-          <td>
-            <a href="/description/{{ d.id }}" class="btn-secondary btn-sm">Voir</a>
-          </td>
+          <td><span class="badge {% if item.cat == 'VR' %}badge-approved{% else %}badge-published{% endif %}">{{ item.cat }}</span></td>
+          <td>{{ e.annee or '' }} {{ e.marque or '' }} {{ e.modele or '' }}</td>
+          <td class="text-muted text-sm">{{ e.auteur or '—' }}</td>
+          <td><strong>{% if e.prix_median %}{{ "{:,}".format(e.prix_median).replace(",", " ") }} ${% else %}—{% endif %}</strong></td>
+          <td class="text-muted">{{ e.nb_comparables }}</td>
+          <td class="text-muted text-sm">{{ e.created_at.strftime('%d %b %Y') }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -99,9 +121,9 @@
   </div>
   {% else %}
   <div style="text-align:center; padding:32px; color:var(--text-muted);">
-    <i class="fa fa-file-circle-plus" style="font-size:2.5rem; margin-bottom:12px; display:block; opacity:0.4;"></i>
-    Aucune description pour l'instant.<br>
-    <a href="/generate" style="margin-top:12px; display:inline-block;">Générez votre première description →</a>
+    <i class="fa fa-chart-line" style="font-size:2.5rem; margin-bottom:12px; display:block; opacity:0.4;"></i>
+    Aucune évaluation ce mois-ci.<br>
+    <a href="/evaluer" style="margin-top:12px; display:inline-block;">Lancer une évaluation →</a>
   </div>
   {% endif %}
 </div>
