@@ -3,17 +3,6 @@
 
 {% block head %}
 <style>
-  .type-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
-  .type-tab {
-    padding:10px 18px; border-radius:10px; border:1.5px solid var(--border);
-    background:var(--bg); font-weight:600; cursor:pointer; font-size:0.9rem;
-    color:var(--text); transition:all .12s;
-  }
-  .type-tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
-  .type-tab.disabled {
-    opacity:.4; cursor:not-allowed; background:var(--bg);
-  }
-  .type-tab .fa-lock { font-size:.7rem; margin-left:5px; }
   .btn-evaluer {
     background:#d21f26; color:#fff; border:none; border-radius:12px;
     padding:16px 48px; font-size:1.25rem; font-weight:800; letter-spacing:.05em;
@@ -37,44 +26,23 @@
 {% block content %}
 <div class="page-header">
   <h1 class="page-title"><i class="fa fa-tags" style="color:var(--accent);"></i> Évaluer un véhicule</h1>
-  <p class="page-subtitle">Analyse de marché d'un modèle à partir de vos annonces comparables</p>
+  <p class="page-subtitle">Analyse de marché à partir de vos annonces comparables</p>
 </div>
 
 <form method="post" action="/evaluer" id="eval-form">
   <input type="hidden" name="type_unite" id="type_unite" value="{{ type_actif }}" />
 
   <div class="card">
-    <div class="card-title"><i class="fa fa-truck-moving"></i> Type de véhicule</div>
-    <div class="type-tabs">
-      {% for o in onglets %}
-        {% if o.actif %}
-        <div class="type-tab {% if o.cle == type_actif %}active{% endif %}"
-             data-type="{{ o.cle }}" onclick="choisirType(this)">{{ o.libelle }}</div>
-        {% else %}
-        <div class="type-tab disabled" title="Bientôt disponible">
-          {{ o.libelle }} <i class="fa fa-lock"></i>
-        </div>
-        {% endif %}
-      {% endfor %}
-    </div>
-
-    <div class="form-row cols-2">
-      <div class="form-group">
-        <label class="form-label">Marque</label>
-        <input class="form-control" name="marque" placeholder="ex : Forest River"
-               value="{{ form.marque if form else '' }}" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Ligne (gamme)</label>
-        <input class="form-control" name="ligne" placeholder="ex : Rockwood Mini Lite"
-               value="{{ form.ligne if form else '' }}" />
-      </div>
-    </div>
-    <div class="form-row cols-2">
+    <div class="form-row cols-2" style="align-items:end;">
       <div class="form-group mb-0">
-        <label class="form-label">Modèle (plancher)</label>
-        <input class="form-control" name="modele" placeholder="ex : 2205S"
-               value="{{ form.modele if form else '' }}" />
+        <label class="form-label">Type de véhicule</label>
+        <select class="form-control" onchange="document.getElementById('type_unite').value=this.value">
+          {% for o in onglets %}
+            <option value="{{ o.cle }}" {% if o.cle == type_actif %}selected{% endif %} {% if not o.actif %}disabled{% endif %}>
+              {{ o.libelle }}{% if not o.actif %} (bientôt){% endif %}
+            </option>
+          {% endfor %}
+        </select>
       </div>
       <div class="form-group mb-0">
         <label class="form-label">Année</label>
@@ -82,15 +50,32 @@
                placeholder="ex : 2021" value="{{ form.annee if form else '' }}" />
       </div>
     </div>
-    <p class="form-hint" style="margin-top:10px;">
-      <i class="fa fa-circle-info" style="color:var(--accent);"></i>
-      L'analyse inclut aussi des VR d'<strong>autres marques de gabarit équivalent</strong>
-      (même type et longueur proche), déduits automatiquement de vos annonces.
-    </p>
-  </div>
 
-  <div style="text-align:center; margin:8px 0 28px;">
-    <button type="submit" class="btn-evaluer"><i class="fa fa-magnifying-glass-dollar"></i> ÉVALUER</button>
+    <div class="form-row cols-2" style="margin-top:14px;">
+      <div class="form-group mb-0">
+        <label class="form-label">Marque</label>
+        <input class="form-control" name="marque" placeholder="ex : Forest River"
+               value="{{ form.marque if form else '' }}" />
+      </div>
+      <div class="form-group mb-0">
+        <label class="form-label">Modèle / Gamme</label>
+        <input class="form-control" name="ligne" placeholder="ex : Rockwood Mini Lite"
+               value="{{ form.ligne if form else '' }}" />
+      </div>
+    </div>
+
+    <div class="form-row cols-2" style="margin-top:14px;">
+      <div class="form-group mb-0">
+        <label class="form-label">Plan de plancher</label>
+        <input class="form-control" name="modele" placeholder="ex : 2205S"
+               value="{{ form.modele if form else '' }}" />
+      </div>
+      <div class="form-group mb-0" style="display:flex; align-items:flex-end;">
+        <button type="submit" class="btn-evaluer" style="width:100%; padding:13px; font-size:1.1rem;">
+          <i class="fa fa-magnifying-glass-dollar"></i> ÉVALUER
+        </button>
+      </div>
+    </div>
   </div>
 </form>
 
@@ -199,15 +184,12 @@
 {% endif %}
 
 {% if form and (form.modele or form.ligne) %}
-<!-- Saisie d'une estimation utilisateur -->
 <div class="card" style="border-top:3px solid var(--accent);">
   <div class="card-title"><i class="fa fa-user-pen"></i> Ajouter votre estimation de valeur marchande</div>
   <p class="text-muted text-sm" style="margin-bottom:14px;">
     Enregistrez votre estimation pour ce véhicule
     (<strong>{{ form.marque }} {{ form.ligne }} {{ form.modele }}{% if form.annee %}, {{ form.annee }}{% endif %}</strong>).
-    Elle est conservée avec votre nom, la date et l'heure, puis proposée (badge
-    « Utilisateur ») lors des prochaines évaluations de ce modèle ou d'un modèle similaire.
-    Elle n'entre pas dans le calcul du prix médian.
+    Elle est conservée avec votre nom et la date, puis proposée comme comparable « Utilisateur » lors des prochaines évaluations.
   </p>
   <form method="post" action="/evaluer/estimation">
     <input type="hidden" name="type_unite" value="{{ type_actif }}" />
@@ -218,7 +200,7 @@
     <input type="hidden" name="longueur_cible" value="{{ longueur_cible if longueur_cible is not none else '' }}" />
     <div class="form-row cols-2">
       <div class="form-group">
-        <label class="form-label">Votre estimation (valeur marchande, $)</label>
+        <label class="form-label">Votre estimation de valeur marchande ($)</label>
         <input class="form-control" type="text" name="valeur_estimee" inputmode="numeric"
                placeholder="ex : 31 500" required />
       </div>
@@ -237,12 +219,6 @@
 {% block scripts %}
 <script src="/static/js/fuzzyAutocomplete.js?v=2"></script>
 <script>
-function choisirType(el) {
-  document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('type_unite').value = el.dataset.type;
-}
-
 (function () {
   const form = document.getElementById('eval-form');
   const getType = () => document.getElementById('type_unite').value;
@@ -250,18 +226,16 @@ function choisirType(el) {
 
   function remplir(s) {
     if (s.marque) form.marque.value = s.marque;
-    if (s.ligne) form.ligne.value = s.ligne;
+    if (s.ligne)  form.ligne.value  = s.ligne;
     if (s.modele) form.modele.value = s.modele;
   }
 
-  // Autocomplétion floue sur chaque champ (remplit les 3 à la sélection)
   Object.entries(champs).forEach(([champ, input]) => {
     if (input && window.attachFuzzy) {
       window.attachFuzzy(input, { champ: champ, getTypeUnite: getType, onSelect: remplir });
     }
   });
 
-  // « Vouliez-vous dire… ? » : cliquer une proposition remplit et relance
   document.querySelectorAll('.suggestion-chip').forEach(btn => {
     btn.addEventListener('click', () => {
       remplir({ marque: btn.dataset.marque, ligne: btn.dataset.ligne, modele: btn.dataset.modele });
